@@ -32,9 +32,9 @@ onMounted(async () => {
             <div
                 v-for="product in row"
                 :key="product.id"
-                :class="`col-${12 / row.length}`"
+                :class="`col-sm-${12 / row.length} d-flex justify-content-center`"
             >
-                <div class="card" style="width:400px">
+                <div class="card">
                     <img class="card-img-top" :src="getImageUrl(product.image_path)" :alt="product.description">
                     <div class="card-body">
                         <h4 class="card-title">{{ product.name }}</h4>
@@ -48,7 +48,19 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.container > .row {
+    width: 100%;
+    justify-content: center;
+}
+
 .card {
+    width: min(100%, 400px);
     margin: 1rem auto;
 }
 </style>
