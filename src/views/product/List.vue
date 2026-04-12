@@ -8,7 +8,6 @@ onMounted(async () => {
     const response = await request.get('/products')
     products.value = response.data
 })
-
 </script>
 
 <template>
