@@ -14,7 +14,7 @@
                 </li>
             </ul>
             <form class="d-flex">
-                <input class="form-control me-2" type="text" placeholder="商品名稱">
+                <input class="form-control me-2" type="text" placeholder="搜尋產品名稱">
                 <button class="btn btn-primary" type="button">
                     <font-awesome-icon icon="search" />
                 </button>

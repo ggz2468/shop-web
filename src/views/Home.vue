@@ -121,7 +121,7 @@ onUnmounted(() => {
 <template>
     <div class="container-fluid p-3">
         <div class="content-header">
-            <h2 class="title">熱門商品</h2>
+            <h2 class="title">熱門產品</h2>
             <hr class="divider">
         </div>
 
