@@ -1,5 +1,30 @@
-const baseUrl = import.meta.env.VITE_BASE_URL || ''
-const getImageUrl = (imagePath) => `${baseUrl}${imagePath}`
+const normalizeBaseUrl = (value) => {
+	if (typeof value !== 'string') {
+		return ''
+	}
+
+	const trimmedValue = value.trim()
+	if (!trimmedValue || trimmedValue === 'undefined' || trimmedValue === 'null') {
+		return ''
+	}
+
+	return trimmedValue.endsWith('/') ? trimmedValue.slice(0, -1) : trimmedValue
+}
+
+const baseUrl = normalizeBaseUrl(import.meta.env.VITE_BASE_URL)
+
+const getImageUrl = (imagePath) => {
+	if (!imagePath) {
+		return ''
+	}
+
+	if (/^https?:\/\//.test(imagePath)) {
+		return imagePath
+	}
+
+	const normalizedPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`
+	return `${baseUrl}${normalizedPath}`
+}
 
 const DESKTOP_ITEMS_PER_PAGE = 6
 const MOBILE_BREAKPOINT = 576
