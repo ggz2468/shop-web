@@ -1,36 +1,43 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed } from 'vue'
 import request from '@/utils/request'
+import {
+    getImageUrl,
+    DESKTOP_ITEMS_PER_PAGE,
+    MOBILE_BREAKPOINT,
+    getTotalPages,
+    getPagedItems,
+    getPaginationItems,
+    getFirstPage,
+    getPrevPage,
+    getNextPage,
+    getLastPage,
+    normalizePage,
+} from '@/assets/js/common'
 
 const products = ref([])
-const baseUrl = import.meta.env.VITE_BASE_URL || ''
 const currentPage = ref(1)
 const isMobile = ref(false)
-
-const DESKTOP_ITEMS_PER_PAGE = 6
-const MOBILE_BREAKPOINT = 576
-
-const getImageUrl = (imagePath) => `${baseUrl}${imagePath}`
 
 const updateViewportState = () => {
     isMobile.value = window.innerWidth <= MOBILE_BREAKPOINT
 }
 
 const totalPages = computed(() => {
-    if (isMobile.value || products.value.length === 0) {
-        return 1
-    }
-
-    return Math.ceil(products.value.length / DESKTOP_ITEMS_PER_PAGE)
+    return getTotalPages({
+        isMobile: isMobile.value,
+        totalItems: products.value.length,
+        itemsPerPage: DESKTOP_ITEMS_PER_PAGE,
+    })
 })
 
 const pagedProducts = computed(() => {
-    if (isMobile.value) {
-        return products.value
-    }
-
-    const start = (currentPage.value - 1) * DESKTOP_ITEMS_PER_PAGE
-    return products.value.slice(start, start + DESKTOP_ITEMS_PER_PAGE)
+    return getPagedItems({
+        isMobile: isMobile.value,
+        items: products.value,
+        currentPage: currentPage.value,
+        itemsPerPage: DESKTOP_ITEMS_PER_PAGE,
+    })
 })
 
 const productRows = computed(() => {
@@ -43,66 +50,33 @@ const productRows = computed(() => {
 })
 
 const goFirstPage = () => {
-    currentPage.value = 1
+    currentPage.value = getFirstPage()
 }
 
 const goPrevPage = () => {
-    currentPage.value = Math.max(1, currentPage.value - 1)
+    currentPage.value = getPrevPage(currentPage.value)
 }
 
 const goNextPage = () => {
-    currentPage.value = Math.min(totalPages.value, currentPage.value + 1)
+    currentPage.value = getNextPage({
+        currentPage: currentPage.value,
+        totalPages: totalPages.value,
+    })
 }
 
 const goLastPage = () => {
-    currentPage.value = totalPages.value
+    currentPage.value = getLastPage(totalPages.value)
 }
 
 const goToPage = (page) => {
-    currentPage.value = page
+    currentPage.value = normalizePage({ page, totalPages: totalPages.value })
 }
 
 const paginationItems = computed(() => {
-    const total = totalPages.value
-    const current = currentPage.value
-
-    if (total <= 10) {
-        return Array.from({ length: total }, (_, index) => ({
-            type: 'page',
-            value: index + 1,
-        }))
-    }
-
-    if (current <= 6) {
-        const startPages = Array.from({ length: 9 }, (_, index) => ({
-            type: 'page',
-            value: index + 1,
-        }))
-
-        return [...startPages, { type: 'ellipsis' }, { type: 'page', value: total }]
-    }
-
-    if (current >= total - 5) {
-        const endPages = Array.from({ length: 9 }, (_, index) => ({
-            type: 'page',
-            value: total - 8 + index,
-        }))
-
-        return [{ type: 'page', value: 1 }, { type: 'ellipsis' }, ...endPages]
-    }
-
-    const middlePages = Array.from({ length: 7 }, (_, index) => ({
-        type: 'page',
-        value: current - 3 + index,
-    }))
-
-    return [
-        { type: 'page', value: 1 },
-        { type: 'ellipsis' },
-        ...middlePages,
-        { type: 'ellipsis' },
-        { type: 'page', value: total },
-    ]
+    return getPaginationItems({
+        totalPages: totalPages.value,
+        currentPage: currentPage.value,
+    })
 })
 
 onMounted(async () => {
@@ -178,30 +152,6 @@ onUnmounted(() => {
 </template>
 
 <style scoped>
-.title {
-    font-family: 新細明體, Ming-LiU, serif;
-    font-size: 36px;
-    font-weight: bold;
-    margin: 1rem 0 0 0;
-}
-
-.divider {
-    width: 100%;
-    border: none;
-    border-top: 2px solid #000;
-    margin: 0.5rem 0 1rem 0;
-}
-
-.container > .row {
-    width: 100%;
-}
-
-.card {
-    width: min(100%, 400px);
-    margin: 1rem auto;
-    text-align: center;
-}
-
 .pagination-wrapper {
     display: flex;
     justify-content: center;
@@ -224,18 +174,5 @@ onUnmounted(() => {
     min-width: 2rem;
     text-align: center;
     font-weight: 600;
-}
-
-@media (max-width: 576px) {
-    .content-header {
-        text-align: center;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .title {
-        font-size: 24px;
-    }
 }
 </style>

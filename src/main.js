@@ -12,6 +12,10 @@ import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
 import { faUser, faHouse, faSearch } from '@fortawesome/free-solid-svg-icons'
 
+// 引入共用 CSS, JS
+import '@/assets/css/common.css'
+import '@/assets/js/common.js'
+
 // 將圖示加入圖示庫
 library.add(faUser, faHouse, faSearch)
 
