@@ -29,7 +29,7 @@ onMounted(async () => {
                 <div class="card-body">
                     <h4 class="card-title">{{ product.name }}</h4>
                     <p class="card-text">
-                        <p>{{ product.description }}</p>
+                        <span class="d-block">{{ product.description }}</span>
                         {{ `特價 NT$ ${product.price} 元` }}
                     </p>
                     <button class="btn btn-primary">加入購物車</button>
