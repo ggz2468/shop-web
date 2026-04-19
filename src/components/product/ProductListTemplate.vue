@@ -1,17 +1,12 @@
 <script setup>
 import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
-import { useRoute } from 'vue-router'
 import request from '@/utils/request'
 import {
     getImageUrl,
     DESKTOP_ITEMS_PER_PAGE,
     MOBILE_BREAKPOINT,
-    getQueryPage,
-    getPagedItems,
     resolveProductsData,
     resolvePaginationMeta,
-    getPaginationItems,
-    detectNextPagesWithData,
     buildApiUrlForViewport,
     buildApiUrlWithPage,
     getFirstPage,
@@ -20,7 +15,6 @@ import {
     getLastPage,
     normalizePage,
     shouldShowDesktopPagination,
-    getPageLink,
 } from '@/assets/js/common'
 
 const props = defineProps({
@@ -62,15 +56,18 @@ const props = defineProps({
     },
 })
 
-const route = useRoute()
 const products = ref([])
 const isMobile = ref(false)
 const totalItems = ref(0)
 const totalPages = ref(1)
-const nextPagesWithData = ref(0)
 const fetchSequence = ref(0)
+const activePage = ref(1)
 const pageCache = new Map()
+const pageDataCache = new Map()
+const pageDataCacheVersion = ref(0)
 const inFlightRequests = new Map()
+const lastScrollY = ref(0)
+const isLoadingMore = ref(false)
 
 const normalizedCacheTtlMs = computed(() => {
     return Number.isFinite(props.cacheTtlMs) && props.cacheTtlMs > 0
@@ -90,6 +87,35 @@ const isExpiredCacheEntry = (entry) => {
     }
 
     return Date.now() - entry.cachedAt > normalizedCacheTtlMs.value
+}
+
+const getCachedPageData = (page) => {
+    const cachedEntry = pageDataCache.get(page)
+    if (!cachedEntry) {
+        return null
+    }
+
+    if (isExpiredCacheEntry(cachedEntry)) {
+        pageDataCache.delete(page)
+        pageDataCacheVersion.value += 1
+        return null
+    }
+
+    return cachedEntry.items
+}
+
+const setCachedPageData = (page, items) => {
+    pageDataCache.set(page, {
+        items,
+        cachedAt: Date.now(),
+    })
+
+    if (pageDataCache.size > normalizedCacheMaxEntries.value * 3) {
+        const oldestKey = pageDataCache.keys().next().value
+        pageDataCache.delete(oldestKey)
+    }
+
+    pageDataCacheVersion.value += 1
 }
 
 const cacheResponse = (url, response) => {
@@ -136,29 +162,6 @@ const fetchWithCache = async (url) => {
     return requestPromise
 }
 
-const prefetchNextPageInBackground = ({ apiUrl, currentPage, totalPages }) => {
-    if (props.useClientPagination || isMobile.value) {
-        return
-    }
-
-    if (currentPage >= totalPages) {
-        return
-    }
-
-    const nextPageUrl = buildApiUrlWithPage({
-        apiUrl,
-        page: currentPage + 1,
-    })
-
-    if (!nextPageUrl) {
-        return
-    }
-
-    fetchWithCache(nextPageUrl).catch(() => {
-        // Ignore prefetch failures because user-facing fetch flow remains unchanged.
-    })
-}
-
 const normalizedItemsPerPage = computed(() => {
     return Number.isFinite(props.itemsPerPage) && props.itemsPerPage > 0
         ? props.itemsPerPage
@@ -181,21 +184,57 @@ const updateViewportState = () => {
     isMobile.value = window.innerWidth <= MOBILE_BREAKPOINT
 }
 
-const pagedProducts = computed(() => {
-    if (!props.useClientPagination) {
-        return products.value
+const getHighestContiguousCachedPage = () => {
+    if (props.useClientPagination) {
+        return totalPages.value
     }
 
-    return getPagedItems({
-        isMobile: false,
-        items: products.value,
-        currentPage: currentPage.value,
-        itemsPerPage: normalizedItemsPerPage.value,
-    })
+    let highestPage = 0
+
+    for (let page = 1; page <= totalPages.value; page += 1) {
+        if (!Array.isArray(getCachedPageData(page))) {
+            break
+        }
+
+        highestPage = page
+    }
+
+    return highestPage
+}
+
+const pagedProducts = computed(() => {
+    if (isMobile.value) {
+        if (props.useClientPagination) {
+            return products.value
+        }
+
+        pageDataCacheVersion.value
+        const mobileItems = []
+        const highestCachedPage = getHighestContiguousCachedPage()
+
+        for (let page = 1; page <= highestCachedPage; page += 1) {
+            const pageItems = getCachedPageData(page)
+            if (!Array.isArray(pageItems) || pageItems.length === 0) {
+                break
+            }
+
+            mobileItems.push(...pageItems)
+        }
+
+        return mobileItems
+    }
+
+    if (!props.useClientPagination) {
+        pageDataCacheVersion.value
+        return getCachedPageData(currentPage.value) || []
+    }
+
+    const firstIndex = (currentPage.value - 1) * normalizedItemsPerPage.value
+    return products.value.slice(firstIndex, firstIndex + normalizedItemsPerPage.value)
 })
 
 const currentPage = computed(() => {
-    return normalizePage({ page: getQueryPage(route.query), totalPages: totalPages.value })
+    return normalizePage({ page: activePage.value, totalPages: totalPages.value })
 })
 
 const productRows = computed(() => {
@@ -224,103 +263,226 @@ const lastPage = computed(() => {
     return getLastPage(totalPages.value)
 })
 
-const buildPageLink = (page) => getPageLink({ path: route.path, query: route.query, page })
+const hasCachedPage = (page) => {
+    if (props.useClientPagination) {
+        return page >= 1 && page <= totalPages.value
+    }
+
+    return Array.isArray(getCachedPageData(page))
+}
 
 const paginationItems = computed(() => {
-    return getPaginationItems({
-        currentPage: currentPage.value,
-        nextPagesWithData: nextPagesWithData.value,
-    })
+    const items = []
+    const page = currentPage.value
+
+    for (let previousPage = page - 2; previousPage <= page - 1; previousPage += 1) {
+        if (previousPage >= 1 && hasCachedPage(previousPage)) {
+            items.push(previousPage)
+        }
+    }
+
+    items.push(page)
+
+    for (let nextPageIndex = page + 1; nextPageIndex <= page + 2; nextPageIndex += 1) {
+        if (nextPageIndex <= totalPages.value && hasCachedPage(nextPageIndex)) {
+            items.push(nextPageIndex)
+        }
+    }
+
+    return items.slice(0, 5)
 })
 
-const fetchProducts = async () => {
+const changePage = (page) => {
+    const next = normalizePage({ page, totalPages: totalPages.value })
+    activePage.value = next
+}
+
+const loadMoreMobileProducts = async () => {
+    if (!isMobile.value || props.useClientPagination || isLoadingMore.value) {
+        return
+    }
+
+    const nextPageNumber = getHighestContiguousCachedPage() + 1
+    if (nextPageNumber > totalPages.value) {
+        return
+    }
+
+    isLoadingMore.value = true
+
+    try {
+        await fetchProducts(nextPageNumber)
+    } finally {
+        isLoadingMore.value = false
+    }
+}
+
+const onWindowScroll = () => {
+    const currentScrollY = window.scrollY
+    const isScrollingDown = currentScrollY > lastScrollY.value
+    lastScrollY.value = currentScrollY
+
+    if (!isMobile.value || props.useClientPagination || !isScrollingDown) {
+        return
+    }
+
+    const nearBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 80
+    if (!nearBottom) {
+        return
+    }
+
+    loadMoreMobileProducts()
+}
+
+const cacheBatchByPage = ({ startPage, batchItems }) => {
+    const itemsPerPage = normalizedItemsPerPage.value
+    const pagesPerBatch = Math.max(1, Math.floor(normalizedRequestItemsPerPage.value / itemsPerPage))
+
+    for (let index = 0; index < pagesPerBatch; index += 1) {
+        const page = startPage + index
+        const start = index * itemsPerPage
+        const pageItems = batchItems.slice(start, start + itemsPerPage)
+
+        if (pageItems.length === 0) {
+            break
+        }
+
+        setCachedPageData(page, pageItems)
+    }
+}
+
+const fetchProducts = async (page = currentPage.value) => {
     const currentFetchId = fetchSequence.value + 1
     fetchSequence.value = currentFetchId
 
-    const effectiveApiUrl = buildApiUrlForViewport({
+    const baseApiUrl = buildApiUrlForViewport({
         apiUrl: props.apiUrl,
         isMobile: isMobile.value,
         itemsPerPage: normalizedRequestItemsPerPage.value,
         mobilePages: normalizedMobilePages.value,
     })
+    const queryPage = normalizePage({ page, totalPages: Number.MAX_SAFE_INTEGER })
 
-    const response = await fetchWithCache(effectiveApiUrl)
+    if (!props.useClientPagination) {
+        const cachedCurrentPageItems = getCachedPageData(queryPage)
+        if (cachedCurrentPageItems) {
+            return
+        }
+    }
+
+    const requestUrl = props.useClientPagination
+        ? baseApiUrl
+        : buildApiUrlWithPage({ apiUrl: baseApiUrl, page: queryPage })
+
+    const response = await fetchWithCache(requestUrl)
     if (currentFetchId !== fetchSequence.value) {
         return
     }
 
     const payload = response.data
-    const queryPage = getQueryPage(route.query)
 
     const resolvedProducts = resolveProductsData(payload)
-    products.value = Number.isFinite(props.maxDisplayItems) && props.maxDisplayItems > 0
+    const processedProducts = Number.isFinite(props.maxDisplayItems) && props.maxDisplayItems > 0
         ? resolvedProducts.slice(0, props.maxDisplayItems)
         : resolvedProducts
 
     if (props.useClientPagination) {
+        products.value = processedProducts
         totalItems.value = products.value.length
         totalPages.value = Math.max(1, Math.ceil(totalItems.value / normalizedItemsPerPage.value))
-        nextPagesWithData.value = 0
         return
     }
+
+    cacheBatchByPage({
+        startPage: queryPage,
+        batchItems: processedProducts,
+    })
 
     const paginationMeta = resolvePaginationMeta({
         payload,
         headers: response.headers,
         currentPage: queryPage,
-        itemsPerPage: normalizedRequestItemsPerPage.value,
-        dataLength: products.value.length,
+        itemsPerPage: normalizedItemsPerPage.value,
+        dataLength: processedProducts.length,
     })
 
-    if (isMobile.value) {
-        nextPagesWithData.value = 0
-    } else {
-        const detectedNextPages = await detectNextPagesWithData({
-            requestGet: (url) => fetchWithCache(url),
-            apiUrl: effectiveApiUrl,
-            currentPage: queryPage,
-            maxNextPages: 3,
-        })
+    const pagesFromBatch = Math.max(1, Math.ceil(processedProducts.length / normalizedItemsPerPage.value))
+    const batchLastPage = queryPage + pagesFromBatch - 1
 
-        if (currentFetchId !== fetchSequence.value) {
-            return
-        }
-
-        nextPagesWithData.value = detectedNextPages
-    }
-
-    totalItems.value = paginationMeta.totalItems
-    totalPages.value = Math.max(paginationMeta.totalPages, queryPage + nextPagesWithData.value)
-
-    prefetchNextPageInBackground({
-        apiUrl: effectiveApiUrl,
-        currentPage: queryPage,
-        totalPages: totalPages.value,
-    })
+    totalItems.value = Math.max(totalItems.value, paginationMeta.totalItems)
+    totalPages.value = Math.max(
+        totalPages.value,
+        paginationMeta.totalPages,
+        batchLastPage,
+        Math.ceil(totalItems.value / normalizedItemsPerPage.value),
+    )
 }
 
 onMounted(() => {
     updateViewportState()
+    lastScrollY.value = window.scrollY
     window.addEventListener('resize', updateViewportState)
-})
-
-watch(() => route.path, () => {
-    pageCache.clear()
-    inFlightRequests.clear()
+    window.addEventListener('scroll', onWindowScroll, { passive: true })
 })
 
 watch([normalizedCacheTtlMs, normalizedCacheMaxEntries], () => {
     pageCache.clear()
+    pageDataCache.clear()
+    pageDataCacheVersion.value += 1
     inFlightRequests.clear()
+    totalItems.value = 0
+    totalPages.value = 1
+    isLoadingMore.value = false
+})
+
+watch(isMobile, (mobile) => {
+    lastScrollY.value = window.scrollY
+
+    if (mobile) {
+        activePage.value = 1
+        if (!props.useClientPagination && !hasCachedPage(1)) {
+            fetchProducts(1)
+        }
+        return
+    }
+
+    if (!props.useClientPagination && !hasCachedPage(activePage.value)) {
+        fetchProducts(activePage.value)
+    }
 })
 
 watch([
     () => props.apiUrl,
-    () => (props.useClientPagination ? 0 : isMobile.value),
-], fetchProducts, { immediate: true })
+    normalizedItemsPerPage,
+    normalizedRequestItemsPerPage,
+    normalizedMobilePages,
+    () => props.useClientPagination,
+], () => {
+    pageCache.clear()
+    pageDataCache.clear()
+    pageDataCacheVersion.value += 1
+    inFlightRequests.clear()
+    totalItems.value = 0
+    totalPages.value = 1
+    activePage.value = 1
+    isLoadingMore.value = false
+    fetchProducts(1)
+}, { immediate: true })
+
+watch(activePage, (page) => {
+    if (props.useClientPagination) {
+        return
+    }
+
+    if (hasCachedPage(page)) {
+        return
+    }
+
+    fetchProducts(page)
+})
 
 onUnmounted(() => {
     window.removeEventListener('resize', updateViewportState)
+    window.removeEventListener('scroll', onWindowScroll)
 })
 </script>
 
@@ -354,39 +516,38 @@ onUnmounted(() => {
             </div>
 
             <div v-if="shouldShowDesktopPagination({ isMobile, totalPages, currentPage })" class="pagination-wrapper">
-                <RouterLink v-if="currentPage > 1" class="btn btn-outline-secondary" :to="buildPageLink(firstPage)">
+                <button v-if="currentPage > 1" type="button" class="btn btn-outline-secondary" @click="changePage(firstPage)">
                     最前頁
-                </RouterLink>
+                </button>
                 <span v-else class="btn btn-outline-secondary disabled" aria-disabled="true">
                     最前頁
                 </span>
-                <RouterLink v-if="currentPage > 1" class="btn btn-outline-secondary" :to="buildPageLink(prevPage)">
+                <button v-if="currentPage > 1" type="button" class="btn btn-outline-secondary" @click="changePage(prevPage)">
                     上一頁
-                </RouterLink>
+                </button>
                 <span v-else class="btn btn-outline-secondary disabled" aria-disabled="true">
                     上一頁
                 </span>
-                <template v-for="(item, index) in paginationItems" :key="`page-item-${index}-${item.type}-${item.value ?? 'ellipsis'}`">
-                    <RouterLink
-                        v-if="item.type === 'page'"
+                <template v-for="pageNumber in paginationItems" :key="`page-item-${pageNumber}`">
+                    <button
+                        type="button"
                         class="btn page-number-btn"
-                        :class="item.value === currentPage ? 'btn-primary' : 'btn-outline-secondary'"
-                        :to="buildPageLink(item.value)"
+                        :class="pageNumber === currentPage ? 'btn-primary' : 'btn-outline-secondary'"
+                        @click="changePage(pageNumber)"
                     >
-                        {{ item.value }}
-                    </RouterLink>
-                    <span v-else class="page-ellipsis">...</span>
+                        {{ pageNumber }}
+                    </button>
                 </template>
                 <span class="page-status">第 {{ currentPage }} / {{ totalPages }} 頁</span>
-                <RouterLink v-if="currentPage < totalPages" class="btn btn-outline-secondary" :to="buildPageLink(nextPage)">
+                <button v-if="currentPage < totalPages" type="button" class="btn btn-outline-secondary" @click="changePage(nextPage)">
                     下一頁
-                </RouterLink>
+                </button>
                 <span v-else class="btn btn-outline-secondary disabled" aria-disabled="true">
                     下一頁
                 </span>
-                <RouterLink v-if="currentPage < totalPages" class="btn btn-outline-secondary" :to="buildPageLink(lastPage)">
+                <button v-if="currentPage < totalPages" type="button" class="btn btn-outline-secondary" @click="changePage(lastPage)">
                     最末頁
-                </RouterLink>
+                </button>
                 <span v-else class="btn btn-outline-secondary disabled" aria-disabled="true">
                     最末頁
                 </span>
