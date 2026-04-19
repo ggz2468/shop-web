@@ -1,7 +1,14 @@
 <script setup>
+import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import ProductListTemplate from '@/components/product/ProductListTemplate.vue'
+import { buildProductsApiUrl } from '@/assets/js/common'
+
+const route = useRoute()
+
+const apiUrl = computed(() => buildProductsApiUrl({ query: route.query }))
 </script>
 
 <template>
-    <ProductListTemplate api-url="/products?row_counts_per_page=15&page=1" />
+    <ProductListTemplate :api-url="apiUrl" />
 </template>
