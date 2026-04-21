@@ -1,6 +1,7 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
+import request, { fetchCsrfCookie } from '@/utils/request'
 
 // 引入 Bootstrap CSS
 import 'bootstrap/dist/css/bootstrap.min.css'
@@ -24,9 +25,22 @@ import TheNavbar from '@/components/layout/TheNavbar.vue'
 
 const app = createApp(App)
 
+app.config.globalProperties.$request = request
+app.config.globalProperties.$fetchCsrfCookie = fetchCsrfCookie
+
 app.use(router)
 
 app.component('font-awesome-icon', FontAwesomeIcon)
 app.component('TheNavbar', TheNavbar)
 
-app.mount('#app')
+const bootstrap = async () => {
+	try {
+		await fetchCsrfCookie()
+	} catch (error) {
+		console.error('Failed to initialize Sanctum CSRF cookie.', error)
+	}
+
+	app.mount('#app')
+}
+
+bootstrap()

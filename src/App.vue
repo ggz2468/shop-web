@@ -1,7 +1,9 @@
 <template>
-    <TheNavbar />
+    <div class="app-body">
+        <TheNavbar />
 
-    <router-view />
+        <router-view />
+    </div>
 </template>
 
 <style scoped>
