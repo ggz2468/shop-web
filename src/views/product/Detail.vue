@@ -1,18 +1,15 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import request from '@/utils/request'
 import { useRoute } from 'vue-router'
-import {
-    getImageUrl
-} from '@/assets/js/common'
+import { productServices } from '@/services/productService'
 
 const route = useRoute()
 const product = ref({})
 
 onMounted(async () => {
-    const { id } = route.params
-    const response = await request.get(`/products/${id}`)
-    product.value = response.data
+    const id = route.params.id
+    const response = await productServices.getProductDetail(id)
+    product.value = response.data.data
 })
 </script>
 
@@ -25,7 +22,7 @@ onMounted(async () => {
 
         <div class="content-body">
             <div class="card">
-                <img class="card-img-top" :src="getImageUrl(product.image_path)" :alt="product.name">
+                <img class="card-img-top" :src="product.image_path" :alt="product.name">
                 <div class="card-body">
                     <h4 class="card-title">{{ product.name }}</h4>
                     <p class="card-text">

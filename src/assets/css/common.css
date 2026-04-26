@@ -22,6 +22,33 @@
     text-align: center;
 }
 
+.pagination-container {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    margin: 1rem auto;
+    display: flex;
+    gap: 8px;
+    list-style: none;
+}
+
+.pagination-container li button {
+    padding: 6px 12px;
+    border: 1px solid #ccc;
+    cursor: pointer;
+    color: #fff;
+    background: rgb(0, 128, 255);
+}
+
+.pagination-container li button:hover {
+    background: rgb(0, 100, 200);
+}
+
+.pagination-container li button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+}
+
 @media (max-width: 576px) {
     .content-header {
         text-align: center;

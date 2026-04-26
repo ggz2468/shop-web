@@ -1,3 +1,70 @@
+<script setup>
+import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { authServices } from '@/services/authService'
+import { AUTH_STATE_CHANGE_EVENT, isAuthenticated, setAuthenticated } from '@/composables/useAuth'
+
+const isSearchOpen = ref(false)
+const isUserMenuOpen = ref(false)
+const isLoggingOut = ref(false)
+const loggedIn = ref(false)
+const userMenuRef = ref(null)
+const searchMenuRef = ref(null)
+
+const syncAuthState = async () => {
+    loggedIn.value = await isAuthenticated()
+}
+
+const toggleSearch = () => {
+	isSearchOpen.value = !isSearchOpen.value
+}
+
+const toggleUserMenu = () => {
+	isUserMenuOpen.value = !isUserMenuOpen.value
+}
+
+const handleDocumentClick = (event) => {
+    if (!searchMenuRef.value?.contains(event.target)) {
+        isSearchOpen.value = false
+    }
+
+	if (!userMenuRef.value?.contains(event.target)) {
+		isUserMenuOpen.value = false
+	}
+}
+
+const handleAuthAction = async () => {
+	if (!loggedIn.value || isLoggingOut.value) {
+		return
+	}
+
+	isLoggingOut.value = true
+
+	try {
+		await authServices.logout()
+		setAuthenticated(false)
+		window.location.reload()
+	} catch (error) {
+		console.error('Failed to log out.', error)
+	} finally {
+		isLoggingOut.value = false
+		isUserMenuOpen.value = false
+	}
+}
+
+onMounted(() => {
+    void syncAuthState()
+	document.addEventListener('click', handleDocumentClick)
+	window.addEventListener('storage', syncAuthState)
+    window.addEventListener(AUTH_STATE_CHANGE_EVENT, syncAuthState)
+})
+
+onBeforeUnmount(() => {
+	document.removeEventListener('click', handleDocumentClick)
+	window.removeEventListener('storage', syncAuthState)
+    window.removeEventListener(AUTH_STATE_CHANGE_EVENT, syncAuthState)
+})
+</script>
+
 <template>
     <nav class="navbar navbar-expand-sm navbar-dark bg-dark shop-navbar">
         <div class="container-fluid navbar-shell">
@@ -68,74 +135,6 @@
         </div>
     </nav>
 </template>
-
-<script setup>
-import { onBeforeUnmount, onMounted, ref } from 'vue'
-import request, { fetchCsrfCookie } from '@/utils/request'
-import { AUTH_STATE_CHANGE_EVENT, isAuthenticated, setAuthenticated } from '@/utils/auth'
-
-const isSearchOpen = ref(false)
-const isUserMenuOpen = ref(false)
-const isLoggingOut = ref(false)
-const loggedIn = ref(false)
-const userMenuRef = ref(null)
-const searchMenuRef = ref(null)
-
-const syncAuthState = () => {
-	loggedIn.value = isAuthenticated()
-}
-
-const toggleSearch = () => {
-	isSearchOpen.value = !isSearchOpen.value
-}
-
-const toggleUserMenu = () => {
-	isUserMenuOpen.value = !isUserMenuOpen.value
-}
-
-const handleDocumentClick = (event) => {
-    if (!searchMenuRef.value?.contains(event.target)) {
-        isSearchOpen.value = false
-    }
-
-	if (!userMenuRef.value?.contains(event.target)) {
-		isUserMenuOpen.value = false
-	}
-}
-
-const handleAuthAction = async () => {
-	if (!loggedIn.value || isLoggingOut.value) {
-		return
-	}
-
-	isLoggingOut.value = true
-
-	try {
-		await fetchCsrfCookie()
-		await request.post('/logout')
-		setAuthenticated(false)
-		window.location.reload()
-	} catch (error) {
-		console.error('Failed to log out.', error)
-	} finally {
-		isLoggingOut.value = false
-		isUserMenuOpen.value = false
-	}
-}
-
-onMounted(() => {
-	syncAuthState()
-	document.addEventListener('click', handleDocumentClick)
-	window.addEventListener('storage', syncAuthState)
-    window.addEventListener(AUTH_STATE_CHANGE_EVENT, syncAuthState)
-})
-
-onBeforeUnmount(() => {
-	document.removeEventListener('click', handleDocumentClick)
-	window.removeEventListener('storage', syncAuthState)
-    window.removeEventListener(AUTH_STATE_CHANGE_EVENT, syncAuthState)
-})
-</script>
 
 <style scoped>
 .shop-navbar {

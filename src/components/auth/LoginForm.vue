@@ -43,8 +43,8 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import request from '@/utils/request'
-import { setAuthenticated } from '@/utils/auth'
+import { authServices } from '@/services/authService'
+import { setAuthenticated } from '@/composables/useAuth'
 
 const router = useRouter()
 
@@ -93,7 +93,7 @@ const handleSubmit = async () => {
 	isSubmitting.value = true
 
 	try {
-		await request.post('/login', {
+		await authServices.login({
 			email: form.email,
 			password: form.password
 		})
