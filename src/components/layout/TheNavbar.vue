@@ -104,7 +104,7 @@ onBeforeUnmount(() => {
                             <a
                                 v-if="!loggedIn"
                                 class="user-menu__link"
-                                href="/login"
+                                href="/auth/login"
                                 @click="isUserMenuOpen = false"
                             >
                                 會員登入
