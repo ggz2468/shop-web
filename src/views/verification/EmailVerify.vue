@@ -16,6 +16,13 @@ const startRedirectCountdown = () => {
 	}, 10000)
 }
 
+const goHomeNow = () => {
+	if (redirectTimer) {
+		clearTimeout(redirectTimer)
+	}
+	router.push('/')
+}
+
 const verifyEmail = async () => {
 	const queryToken = route.query.token
 	const token = Array.isArray(queryToken) ? queryToken[0] : queryToken
@@ -56,6 +63,9 @@ onBeforeUnmount(() => {
 			<p class="email-verify-message">{{ message }}</p>
 			<p v-if="isLoading" class="email-verify-note">系統正在處理您的驗證資料...</p>
 			<p v-else class="email-verify-note">系統將於 10 秒後自動跳轉至首頁。</p>
+			<button type="button" class="email-verify-button" @click="goHomeNow">
+				立即返回首頁
+			</button>
 		</div>
 	</section>
 </template>
@@ -97,5 +107,21 @@ onBeforeUnmount(() => {
 	margin: 0;
 	font-size: 14px;
 	color: #6b7280;
+}
+
+.email-verify-button {
+	margin-top: 20px;
+	border: 0;
+	border-radius: 8px;
+	padding: 10px 16px;
+	background-color: #111827;
+	color: #fff;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.email-verify-button:hover {
+	background-color: #1f2937;
 }
 </style>
