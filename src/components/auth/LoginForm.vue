@@ -35,9 +35,20 @@
 				<button type="submit" class="btn btn-primary" :disabled="isSubmitting">
 					{{ isSubmitting ? '登入中...' : '登入' }}
 				</button>
+
+				<div class="login-form__links">
+					<RouterLink :to="{ name: 'Register' }" class="login-form__link">會員註冊</RouterLink>
+					<span class="login-form__separator" aria-hidden="true">|</span>
+					<a href="#" class="login-form__link" @click.prevent>忘記密碼</a>
+				</div>
 			</form>
 		</div>
 	</div>
+
+	<div v-if="showSuccessOverlay" class="auth-success-overlay" role="status" aria-live="polite">
+		<p class="auth-success-overlay__message">登入成功!</p>
+	</div>
+
 </template>
 
 <script setup>
@@ -60,6 +71,9 @@ const errors = reactive({
 
 const isSubmitting = ref(false)
 const submitError = ref('')
+const showSuccessOverlay = ref(false)
+
+const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const validateForm = () => {
 	errors.email = ''
@@ -99,6 +113,8 @@ const handleSubmit = async () => {
 		})
 
 		setAuthenticated(true)
+		showSuccessOverlay.value = true
+		await delay(3000)
 
 		if (window.history.length > 1) {
 			router.back()
@@ -134,5 +150,47 @@ const handleSubmit = async () => {
 
 .btn-primary {
 	width: 100%;
+}
+
+.login-form__links {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	gap: 0.5rem;
+	margin-top: 0.875rem;
+	font-size: 0.95rem;
+}
+
+.login-form__link {
+	color: #0d6efd;
+	text-decoration: none;
+}
+
+.login-form__link:hover {
+	text-decoration: underline;
+}
+
+.login-form__separator {
+	color: #6c757d;
+}
+
+.auth-success-overlay {
+	position: fixed;
+	inset: 0;
+	background-color: rgba(0, 0, 0, 0.3);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 2000;
+}
+
+.auth-success-overlay__message {
+	margin: 0;
+	padding: 1rem 1.75rem;
+	border-radius: 0.75rem;
+	background-color: rgba(0, 0, 0, 0.3);
+	font-size: 1.5rem;
+	font-weight: 700;
+	color: #fff;
 }
 </style>
