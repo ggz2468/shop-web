@@ -41,7 +41,7 @@
 					<span class="login-form__separator" aria-hidden="true">|</span>
 					<RouterLink :to="{ name: 'SendEmailVerificationLink' }" class="login-form__link">補發電子郵件驗證信</RouterLink>
 					<span class="login-form__separator" aria-hidden="true">|</span>
-					<a href="#" class="login-form__link" @click.prevent>忘記密碼</a>
+					<RouterLink :to="{ name: 'ForgotPassword' }" class="login-form__link">忘記密碼</RouterLink>
 				</div>
 			</form>
 		</div>

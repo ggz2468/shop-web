@@ -1,0 +1,98 @@
+<template>
+	<section class="forgot-password-view container py-5">
+		<div class="card shadow-sm forgot-password-card">
+			<div class="card-body p-4 p-md-5">
+				<h1 class="h4 mb-3">忘記密碼</h1>
+				<p class="text-muted mb-4">請輸入您的電子郵件，我們會寄送重設密碼連結給您。</p>
+
+				<form @submit.prevent="handleSubmit" novalidate>
+					<div class="mb-3">
+						<label for="email" class="form-label">電子郵件</label>
+						<input
+							id="email"
+							type="email"
+							class="form-control"
+							placeholder="請輸入電子郵件"
+							v-model.trim="email"
+							autocomplete="email"
+						/>
+						<div v-if="emailError" class="text-danger mt-1">{{ emailError }}</div>
+					</div>
+
+					<div v-if="submitError" class="alert alert-danger" role="alert">
+						{{ submitError }}
+					</div>
+
+					<div v-if="submitSuccess" class="alert alert-success" role="status">
+						{{ submitSuccess }}
+					</div>
+
+					<button type="submit" class="btn btn-primary w-100" :disabled="isSubmitting">
+						{{ isSubmitting ? '發送中...' : '發送重設密碼連結' }}
+					</button>
+				</form>
+			</div>
+		</div>
+	</section>
+</template>
+
+<script setup>
+import { ref } from 'vue'
+import { authServices } from '@/services/authService'
+
+const email = ref('')
+const emailError = ref('')
+const submitError = ref('')
+const submitSuccess = ref('')
+const isSubmitting = ref(false)
+
+const validateEmail = () => {
+	emailError.value = ''
+
+	if (!email.value) {
+		emailError.value = '請輸入電子郵件'
+		return false
+	}
+
+	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
+		emailError.value = '電子郵件格式不正確'
+		return false
+	}
+
+	return true
+}
+
+const handleSubmit = async () => {
+	submitError.value = ''
+	submitSuccess.value = ''
+
+	if (!validateEmail()) {
+		return
+	}
+
+	isSubmitting.value = true
+
+	try {
+		const { data } = await authServices.sendResetLink({ email: email.value })
+		submitSuccess.value = data?.message || '重設密碼連結已送出，請前往信箱確認。'
+	} catch (error) {
+		submitError.value = error?.response?.data?.message || '發送失敗，請稍後再試。'
+	} finally {
+		isSubmitting.value = false
+	}
+}
+</script>
+
+<style scoped>
+.forgot-password-view {
+	min-height: calc(100vh - 56px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.forgot-password-card {
+	width: 100%;
+	max-width: 480px;
+}
+</style>
