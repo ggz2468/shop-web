@@ -1,22 +1,25 @@
 <template>
 	<section class="forgot-password-view container py-5">
-		<div class="card shadow-sm forgot-password-card">
+		<div class="card forgot-password-card">
 			<div class="card-body p-4 p-md-5">
 				<h1 class="h4 mb-3">忘記密碼</h1>
 				<p class="text-muted mb-4">請輸入您的電子郵件，我們會寄送重設密碼連結給您。</p>
 
 				<form @submit.prevent="handleSubmit" novalidate>
-					<div class="mb-3">
-						<label for="email" class="form-label">電子郵件</label>
-						<input
-							id="email"
-							type="email"
-							class="form-control"
-							placeholder="請輸入電子郵件"
-							v-model.trim="email"
-							autocomplete="email"
-						/>
-						<div v-if="emailError" class="text-danger mt-1">{{ emailError }}</div>
+					<div class="mb-3 form-field-row">
+						<label for="email" class="form-label form-field-label">電子郵件</label>
+						<div class="form-field-control">
+							<input
+								id="email"
+								type="email"
+								class="form-control"
+								:class="{ 'is-invalid': emailError }"
+								placeholder="請輸入電子郵件"
+								v-model.trim="email"
+								autocomplete="email"
+							/>
+							<div v-if="emailError" class="invalid-feedback d-block">{{ emailError }}</div>
+						</div>
 					</div>
 
 					<div v-if="submitError" class="alert alert-danger" role="alert">
@@ -94,5 +97,36 @@ const handleSubmit = async () => {
 .forgot-password-card {
 	width: 100%;
 	max-width: 480px;
+	box-shadow: 0 1rem 2.25rem rgba(15, 23, 42, 0.18);
+}
+
+.form-field-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.75rem;
+}
+
+.form-field-label {
+	width: 5.5rem;
+	margin-top: 0.5rem;
+	margin-bottom: 0;
+	white-space: nowrap;
+}
+
+.form-field-control {
+	flex: 1;
+	min-width: 0;
+}
+
+@media (max-width: 576px) {
+	.form-field-row {
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.form-field-label {
+		width: auto;
+		margin-top: 0;
+	}
 }
 </style>

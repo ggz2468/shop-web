@@ -1,58 +1,64 @@
 <template>
 	<section class="reset-password-view container py-5">
-		<div class="card shadow-sm reset-password-card">
+		<div class="card reset-password-card">
 			<div class="card-body p-4 p-md-5">
 				<h1 class="h4 mb-3">重設密碼</h1>
 				<p class="text-muted mb-4">請輸入電子郵件與新密碼以完成重設。</p>
 
 				<form @submit.prevent="handleSubmit" novalidate>
-					<div class="mb-3">
-						<label for="email" class="form-label">電子郵件</label>
-						<input
-							id="email"
-							type="email"
-							class="form-control"
-							:class="{ 'is-invalid': fieldErrors.email }"
-							placeholder="請輸入電子郵件"
-							v-model.trim="form.email"
-							autocomplete="email"
-						/>
-						<div v-if="fieldErrors.email" class="invalid-feedback d-block">
-							{{ fieldErrors.email }}
+					<div class="mb-3 form-field-row">
+						<label for="email" class="form-label form-field-label">電子郵件</label>
+						<div class="form-field-control">
+							<input
+								id="email"
+								type="email"
+								class="form-control"
+								:class="{ 'is-invalid': fieldErrors.email }"
+								placeholder="請輸入電子郵件"
+								v-model.trim="form.email"
+								autocomplete="email"
+							/>
+							<div v-if="fieldErrors.email" class="invalid-feedback d-block">
+								{{ fieldErrors.email }}
+							</div>
 						</div>
 					</div>
 
-					<div class="mb-3">
-						<label for="password" class="form-label">密碼</label>
-						<input
-							id="password"
-							type="password"
-							class="form-control"
-							:class="{ 'is-invalid': fieldErrors.password }"
-							placeholder="請輸入新密碼"
-							v-model="form.password"
-							maxlength="255"
-							autocomplete="new-password"
-						/>
-						<div v-if="fieldErrors.password" class="invalid-feedback d-block">
-							{{ fieldErrors.password }}
+					<div class="mb-3 form-field-row">
+						<label for="password" class="form-label form-field-label">密碼</label>
+						<div class="form-field-control">
+							<input
+								id="password"
+								type="password"
+								class="form-control"
+								:class="{ 'is-invalid': fieldErrors.password }"
+								placeholder="請輸入新密碼"
+								v-model="form.password"
+								maxlength="255"
+								autocomplete="new-password"
+							/>
+							<div v-if="fieldErrors.password" class="invalid-feedback d-block">
+								{{ fieldErrors.password }}
+							</div>
 						</div>
 					</div>
 
-					<div class="mb-3">
-						<label for="password_confirmation" class="form-label">確認密碼</label>
-						<input
-							id="password_confirmation"
-							type="password"
-							class="form-control"
-							:class="{ 'is-invalid': fieldErrors.password_confirmation }"
-							placeholder="請再次輸入新密碼"
-							v-model="form.password_confirmation"
-							maxlength="255"
-							autocomplete="new-password"
-						/>
-						<div v-if="fieldErrors.password_confirmation" class="invalid-feedback d-block">
-							{{ fieldErrors.password_confirmation }}
+					<div class="mb-3 form-field-row">
+						<label for="password_confirmation" class="form-label form-field-label">確認密碼</label>
+						<div class="form-field-control">
+							<input
+								id="password_confirmation"
+								type="password"
+								class="form-control"
+								:class="{ 'is-invalid': fieldErrors.password_confirmation }"
+								placeholder="請再次輸入新密碼"
+								v-model="form.password_confirmation"
+								maxlength="255"
+								autocomplete="new-password"
+							/>
+							<div v-if="fieldErrors.password_confirmation" class="invalid-feedback d-block">
+								{{ fieldErrors.password_confirmation }}
+							</div>
 						</div>
 					</div>
 
@@ -168,5 +174,36 @@ const handleSubmit = async () => {
 .reset-password-card {
 	width: 100%;
 	max-width: 480px;
+	box-shadow: 0 1rem 2.25rem rgba(15, 23, 42, 0.18);
+}
+
+.form-field-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.75rem;
+}
+
+.form-field-label {
+	width: 5.5rem;
+	margin-top: 0.5rem;
+	margin-bottom: 0;
+	white-space: nowrap;
+}
+
+.form-field-control {
+	flex: 1;
+	min-width: 0;
+}
+
+@media (max-width: 576px) {
+	.form-field-row {
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.form-field-label {
+		width: auto;
+		margin-top: 0;
+	}
 }
 </style>

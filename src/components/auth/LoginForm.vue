@@ -1,31 +1,41 @@
 <template>
-	<div class="card login-card shadow-sm border-0">
+	<div class="card login-card border-0">
 		<div class="card-body p-4 p-md-5">
 			<form class="login-form" @submit.prevent="handleSubmit" novalidate>
 				<h1 class="login-form__title">會員登入</h1>
 
-				<div class="mb-3">
-					<input
-						v-model.trim="form.email"
-						type="email"
-						name="email"
-						class="form-control"
-						placeholder="請輸入電子郵件"
-						autocomplete="email"
-					>
-					<div v-if="errors.email" class="text-danger mt-1">{{ errors.email }}</div>
+				<div class="mb-3 form-field-row">
+					<label for="login-email" class="form-label form-field-label">電子郵件</label>
+					<div class="form-field-control">
+						<input
+							id="login-email"
+							v-model.trim="form.email"
+							type="email"
+							name="email"
+							class="form-control"
+							:class="{ 'is-invalid': errors.email }"
+							placeholder="請輸入電子郵件"
+							autocomplete="email"
+						>
+						<div v-if="errors.email" class="invalid-feedback d-block">{{ errors.email }}</div>
+					</div>
 				</div>
 
-				<div class="mb-3">
-					<input
-						v-model="form.password"
-						type="password"
-						name="password"
-						class="form-control"
-						placeholder="請輸入密碼"
-						autocomplete="current-password"
-					>
-					<div v-if="errors.password" class="text-danger mt-1">{{ errors.password }}</div>
+				<div class="mb-3 form-field-row">
+					<label for="login-password" class="form-label form-field-label">密碼</label>
+					<div class="form-field-control">
+						<input
+							id="login-password"
+							v-model="form.password"
+							type="password"
+							name="password"
+							class="form-control"
+							:class="{ 'is-invalid': errors.password }"
+							placeholder="請輸入密碼"
+							autocomplete="current-password"
+						>
+						<div v-if="errors.password" class="invalid-feedback d-block">{{ errors.password }}</div>
+					</div>
 				</div>
 
 				<div v-if="submitError" class="alert alert-danger" role="alert">
@@ -136,10 +146,29 @@ const handleSubmit = async () => {
 .login-card {
 	width: min(100%, 420px);
 	border-radius: 1rem;
+	box-shadow: 0 1rem 2.25rem rgba(15, 23, 42, 0.18);
 }
 
 .login-form {
 	width: 100%;
+}
+
+.form-field-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.75rem;
+}
+
+.form-field-label {
+	width: 5.5rem;
+	margin-top: 0.5rem;
+	margin-bottom: 0;
+	white-space: nowrap;
+}
+
+.form-field-control {
+	flex: 1;
+	min-width: 0;
 }
 
 .login-form__title {
@@ -194,5 +223,17 @@ const handleSubmit = async () => {
 	font-size: 1.5rem;
 	font-weight: 700;
 	color: #fff;
+}
+
+@media (max-width: 576px) {
+	.form-field-row {
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.form-field-label {
+		width: auto;
+		margin-top: 0;
+	}
 }
 </style>

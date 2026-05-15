@@ -5,16 +5,21 @@
 			<p class="send-email-verification-description">請輸入註冊時使用的電子郵件，系統將寄送新的驗證連結。</p>
 
 			<form class="send-email-verification-form" @submit.prevent="handleSubmit" novalidate>
-				<div class="mb-3">
-					<input
-						v-model.trim="email"
-						type="email"
-						name="email"
-						class="form-control"
-						placeholder="請輸入電子郵件"
-						autocomplete="email"
-					>
-					<div v-if="emailError" class="text-danger mt-1">{{ emailError }}</div>
+				<div class="mb-3 form-field-row">
+					<label for="verification-email" class="form-label form-field-label">電子郵件</label>
+					<div class="form-field-control">
+						<input
+							id="verification-email"
+							v-model.trim="email"
+							type="email"
+							name="email"
+							class="form-control"
+							:class="{ 'is-invalid': emailError }"
+							placeholder="請輸入電子郵件"
+							autocomplete="email"
+						>
+						<div v-if="emailError" class="invalid-feedback d-block">{{ emailError }}</div>
+					</div>
 				</div>
 
 				<div v-if="submitError" class="alert alert-danger" role="alert">
@@ -97,7 +102,7 @@ const handleSubmit = async () => {
 	border: 1px solid #e5e7eb;
 	border-radius: 12px;
 	background-color: #fff;
-	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+	box-shadow: 0 1rem 2.25rem rgba(15, 23, 42, 0.18);
 }
 
 .send-email-verification-title {
@@ -116,7 +121,37 @@ const handleSubmit = async () => {
 	text-align: center;
 }
 
+.form-field-row {
+	display: flex;
+	align-items: flex-start;
+	gap: 0.75rem;
+}
+
+.form-field-label {
+	width: 5.5rem;
+	margin-top: 0.5rem;
+	margin-bottom: 0;
+	white-space: nowrap;
+}
+
+.form-field-control {
+	flex: 1;
+	min-width: 0;
+}
+
 .btn-primary {
 	width: 100%;
+}
+
+@media (max-width: 576px) {
+	.form-field-row {
+		flex-direction: column;
+		gap: 0.35rem;
+	}
+
+	.form-field-label {
+		width: auto;
+		margin-top: 0;
+	}
 }
 </style>

@@ -84,7 +84,7 @@ onBeforeUnmount(() => {
                         </button>
                         <div v-if="isSearchOpen" class="search-menu__panel">
                             <form class="navbar-search-form d-flex" @submit.prevent>
-                                <input class="form-control me-2" type="text" placeholder="搜尋產品名稱">
+                                <input id="navbar-search-keyword" class="form-control me-2" type="text" placeholder="搜尋產品名稱">
                                 <button class="btn btn-primary" type="button">
                                     搜尋
                                 </button>
