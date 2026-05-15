@@ -4,8 +4,25 @@ import productRoutes from './modules/product'
 import verificationRoutes from './modules/verification'
 
 let previousRouteName = null
+const PREVIOUS_PAGE_FALLBACK_ROUTE_NAMES = new Set([
+    'Register',
+    'ForgotPassword',
+    'SendEmailVerificationLink',
+    'Login'
+])
 
-export const getPreviousRouteName = () => previousRouteName
+export const redirectAfterLogin = () => {
+    if (!previousRouteName || PREVIOUS_PAGE_FALLBACK_ROUTE_NAMES.has(previousRouteName)) {
+        return router.push({ name: 'Home' })
+    }
+
+    if (window.history.length > 1) {
+        router.back()
+        return Promise.resolve()
+    }
+
+    return router.push({ name: 'Home' })
+}
 
 const routes = [
     {
