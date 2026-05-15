@@ -33,6 +33,10 @@
 					<button type="submit" class="btn btn-primary w-100" :disabled="isSubmitting">
 						{{ isSubmitting ? '發送中...' : '發送重設密碼連結' }}
 					</button>
+
+					<div class="forgot-password-login-link-wrapper">
+						<RouterLink :to="{ name: 'Login' }" class="forgot-password-login-link">會員登入</RouterLink>
+					</div>
 				</form>
 			</div>
 		</div>
@@ -116,6 +120,21 @@ const handleSubmit = async () => {
 .form-field-control {
 	flex: 1;
 	min-width: 0;
+}
+
+.forgot-password-login-link-wrapper {
+	margin-top: 12px;
+	text-align: center;
+	font-size: 0.95rem;
+}
+
+.forgot-password-login-link {
+	color: #0d6efd;
+	text-decoration: none;
+}
+
+.forgot-password-login-link:hover {
+	text-decoration: underline;
 }
 
 @media (max-width: 576px) {

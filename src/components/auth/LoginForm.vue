@@ -47,11 +47,12 @@
 				</button>
 
 				<div class="login-form__links">
-					<RouterLink :to="{ name: 'Register' }" class="login-form__link">會員註冊</RouterLink>
-					<span class="login-form__separator" aria-hidden="true">|</span>
+					<div class="login-form__links-row">
+						<RouterLink :to="{ name: 'Register' }" class="login-form__link">會員註冊</RouterLink>
+						<span class="login-form__separator" aria-hidden="true">|</span>
+						<RouterLink :to="{ name: 'ForgotPassword' }" class="login-form__link">忘記密碼</RouterLink>
+					</div>
 					<RouterLink :to="{ name: 'SendEmailVerificationLink' }" class="login-form__link">補發電子郵件驗證信</RouterLink>
-					<span class="login-form__separator" aria-hidden="true">|</span>
-					<RouterLink :to="{ name: 'ForgotPassword' }" class="login-form__link">忘記密碼</RouterLink>
 				</div>
 			</form>
 		</div>
@@ -185,11 +186,18 @@ const handleSubmit = async () => {
 
 .login-form__links {
 	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.35rem;
+	margin-top: 0.875rem;
+	font-size: 0.95rem;
+}
+
+.login-form__links-row {
+	display: flex;
 	justify-content: center;
 	align-items: center;
 	gap: 0.5rem;
-	margin-top: 0.875rem;
-	font-size: 0.95rem;
 }
 
 .login-form__link {

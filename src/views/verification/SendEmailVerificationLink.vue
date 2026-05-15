@@ -33,6 +33,10 @@
 				<button type="submit" class="btn btn-primary" :disabled="isSubmitting">
 					{{ isSubmitting ? '發送中...' : '發送驗證連結' }}
 				</button>
+
+				<div class="login-link-wrapper">
+					<RouterLink :to="{ name: 'Login' }" class="login-link">會員登入</RouterLink>
+				</div>
 			</form>
 		</div>
 	</section>
@@ -141,6 +145,22 @@ const handleSubmit = async () => {
 
 .btn-primary {
 	width: 100%;
+}
+
+.login-link-wrapper {
+	margin-top: 12px;
+	text-align: center;
+	font-size: 0.95rem;
+}
+
+.login-link {
+	color: #0d6efd;
+	font-weight: 500;
+	text-decoration: none;
+}
+
+.login-link:hover {
+	text-decoration: underline;
 }
 
 @media (max-width: 576px) {
