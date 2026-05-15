@@ -3,6 +3,10 @@ import authRoutes from './modules/auth'
 import productRoutes from './modules/product'
 import verificationRoutes from './modules/verification'
 
+let previousRouteName = null
+
+export const getPreviousRouteName = () => previousRouteName
+
 const routes = [
     {
         path: '/',
@@ -20,7 +24,8 @@ const router = createRouter({
     routes,
 })
 
-router.afterEach((to) => {
+router.afterEach((to, from) => {
+    previousRouteName = typeof from.name === 'string' ? from.name : null
     document.title = to.meta.title || import.meta.env.VITE_APP_TITLE
 })
 

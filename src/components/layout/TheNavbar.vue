@@ -68,9 +68,9 @@ onBeforeUnmount(() => {
 <template>
     <nav class="navbar navbar-expand-sm navbar-dark bg-dark shop-navbar">
         <div class="container-fluid navbar-shell">
-            <a class="navbar-brand" href="/">
+            <RouterLink class="navbar-brand" :to="{ name: 'Home' }">
                 <font-awesome-icon icon="house" />
-            </a>
+            </RouterLink>
             <div class="navbar-controls">
                 <div class="navbar-actions d-flex align-items-center gap-2">
                     <div class="search-menu" ref="searchMenuRef">
@@ -101,14 +101,14 @@ onBeforeUnmount(() => {
                             <font-awesome-icon icon="user" />
                         </button>
                         <div v-if="isUserMenuOpen" class="user-menu__panel">
-                            <a
+                            <RouterLink
                                 v-if="!loggedIn"
                                 class="user-menu__link"
-                                href="/auth/login"
+                                :to="{ name: 'Login' }"
                                 @click="isUserMenuOpen = false"
                             >
                                 會員登入
-                            </a>
+                            </RouterLink>
                             <button
                                 v-else
                                 class="user-menu__link user-menu__button"
@@ -128,7 +128,7 @@ onBeforeUnmount(() => {
             <div class="collapse navbar-collapse navbar-menu" id="mynavbar">
                 <ul class="navbar-nav me-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/products">所有產品</a>
+                        <RouterLink class="nav-link" :to="{ name: 'ProductList' }">所有產品</RouterLink>
                     </li>
                 </ul>
             </div>

@@ -69,8 +69,16 @@ import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { authServices } from '@/services/authService'
 import { setAuthenticated } from '@/composables/useAuth'
+import { getPreviousRouteName } from '@/router'
 
 const router = useRouter()
+
+const PREVIOUS_PAGE_FALLBACK_ROUTE_NAMES = new Set([
+	'Register',
+	'ForgotPassword',
+	'SendEmailVerificationLink',
+	'Login'
+])
 
 const form = reactive({
 	email: '',
@@ -128,6 +136,13 @@ const handleSubmit = async () => {
 		setAuthenticated(true)
 		showSuccessOverlay.value = true
 		await delay(3000)
+
+		const previousRouteName = getPreviousRouteName()
+
+		if (!previousRouteName || PREVIOUS_PAGE_FALLBACK_ROUTE_NAMES.has(previousRouteName)) {
+			router.push({ name: 'Home' })
+			return
+		}
 
 		if (window.history.length > 1) {
 			router.back()
