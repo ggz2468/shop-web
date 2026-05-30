@@ -3,7 +3,7 @@ name: CI/CD for Vue Frontend
 on:
   push:
     branches:
-      - main  # 或你要部署的分支
+      - main
 
 jobs:
   test-and-build:
@@ -17,6 +17,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
+          cache: 'npm'
 
       - name: Install dependencies
         run: |
@@ -26,15 +27,18 @@ jobs:
             npm install
           fi
 
+      - name: Set env from .env
+        run: |
+          echo "VITE_APP_TITLE=鈞弘電子商務" >> $GITHUB_ENV
+          echo "VITE_BASE_URL=http://localhost" >> $GITHUB_ENV
+          echo "VITE_API_BASE_URL=http://localhost/api" >> $GITHUB_ENV
+          echo "VITE_SANCTUM_CSRF_COOKIE_URL=http://localhost/sanctum/csrf-cookie" >> $GITHUB_ENV
 
       - name: Run unit tests
         run: npm run test:unit
 
       - name: Run e2e tests
         run: npm run test:e2e
-
-      - name: Build project
-        run: npm run build
 
       - name: Archive production build
         run: tar -czf dist.tar.gz dist
@@ -48,17 +52,27 @@ jobs:
           source: "dist.tar.gz"
           target: ${{ secrets.GCP_TARGET_DIR }}
 
-      - name: Extract and Replace on Server
+      - name: Extract and Replace on Server (Zero-downtime)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.GCP_HOST }}
           username: ${{ secrets.GCP_USER }}
           key: ${{ secrets.GCP_SSH_KEY }}
           script: |
-            cd ${{ secrets.GCP_TARGET_DIR }}
-            tar -xzf dist.tar.gz
-            rm -rf dist_old
-            [ -d dist ] && mv dist dist_old
-            mv dist dist
+            TARGET_DIR="${{ secrets.GCP_TARGET_DIR }}"
+            RELEASE_NAME="release-${{ github.run_id }}"
+            
+            cd $TARGET_DIR
+            
+            # 建立本次部署的專屬目錄並解壓
+            mkdir -p releases/$RELEASE_NAME
+            tar -xzf dist.tar.gz -C releases/$RELEASE_NAME
             rm dist.tar.gz
             
+            # 確保 Nginx 指向的是 $TARGET_DIR/current
+            # 原子級變更軟連結，達成無縫切換
+            rm -f current
+            ln -s releases/$RELEASE_NAME/dist current
+            
+            # 自動清理舊版本，只保留最近 3 次的歷史紀錄
+            cd releases && ls -t | tail -n +4 | xargs rm -rf 2>/dev/null || true
