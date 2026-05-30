@@ -1,0 +1,64 @@
+name: CI/CD for Vue Frontend
+
+on:
+  push:
+    branches:
+      - main  # 或你要部署的分支
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm install
+          fi
+
+
+      - name: Run unit tests
+        run: npm run test:unit
+
+      - name: Run e2e tests
+        run: npm run test:e2e
+
+      - name: Build project
+        run: npm run build
+
+      - name: Archive production build
+        run: tar -czf dist.tar.gz dist
+
+      - name: Deploy to GCP Compute Engine
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USER }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          source: "dist.tar.gz"
+          target: ${{ secrets.GCP_TARGET_DIR }}
+
+      - name: Extract and Replace on Server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.GCP_HOST }}
+          username: ${{ secrets.GCP_USER }}
+          key: ${{ secrets.GCP_SSH_KEY }}
+          script: |
+            cd ${{ secrets.GCP_TARGET_DIR }}
+            tar -xzf dist.tar.gz
+            rm -rf dist_old
+            [ -d dist ] && mv dist dist_old
+            mv dist dist
+            rm dist.tar.gz
+            
