@@ -2,7 +2,7 @@ const { defineConfig } = require('cypress')
 
 module.exports = defineConfig({
     e2e: {
-        baseUrl: 'https://chun-hung.idv.tw',
+        baseUrl: 'http://localhost:4173',
         specPattern: 'tests/e2e/**/*.cy.{js,ts}',
         supportFile: false,
     }
