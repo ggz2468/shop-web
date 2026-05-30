@@ -30,14 +30,11 @@ jobs:
       - name: Set env from .env
         run: |
           echo "VITE_APP_TITLE=鈞弘電子商務" >> $GITHUB_ENV
-          echo "VITE_BASE_URL=http://localhost" >> $GITHUB_ENV
-          echo "VITE_API_BASE_URL=http://localhost/api" >> $GITHUB_ENV
-          echo "VITE_SANCTUM_CSRF_COOKIE_URL=http://localhost/sanctum/csrf-cookie" >> $GITHUB_ENV
+          echo "VITE_BASE_URL=/" >> $GITHUB_ENV
+          echo "VITE_API_BASE_URL=/api" >> $GITHUB_ENV
+          echo "VITE_SANCTUM_CSRF_COOKIE_URL=/sanctum/csrf-cookie" >> $GITHUB_ENV
 
           echo "CYPRESS_VITE_APP_TITLE=鈞弘電子商務" >> $GITHUB_ENV
-          echo "CYPRESS_VITE_BASE_URL=http://localhost" >> $GITHUB_ENV
-          echo "CYPRESS_VITE_API_BASE_URL=http://localhost/api" >> $GITHUB_ENV
-          echo "CYPRESS_VITE_SANCTUM_CSRF_COOKIE_URL=http://localhost/sanctum/csrf-cookie" >> $GITHUB_ENV
 
       - name: Run unit tests
         run: npm run test:unit
