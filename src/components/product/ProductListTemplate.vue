@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } 
 import { useRoute } from 'vue-router'
 import { usePagination } from '@/composables/usePagination'
 import { DEFAULT_ROW_COUNTS_PER_PAGE, HOMEPAGE_MAX_ROW_COUNTS } from '@/utils/pagination'
+import { getProductVariants, formatVariantName } from '@/utils/productVariant'
 import Pagination from '@/components/layout/Pagination.vue'
 
 let observer = null
@@ -167,8 +168,18 @@ onBeforeUnmount(() => {
                         <img class="card-img-top" :src="product.image_path" :alt="product.name">
                         <div class="card-body">
                             <h4 class="card-title">{{ product.name }}</h4>
-                            <p class="card-text">{{ `特價 NT$ ${product.price}  元` }}</p>
-                            <a :href="`/products/${product.id}`" class="btn btn-primary">詳細資訊</a>
+                            <p class="card-text">{{ product.description }}</p>
+                            <div v-if="getProductVariants(product).length > 0" class="variant-links">
+                                <RouterLink
+                                    v-for="variant in getProductVariants(product)"
+                                    :key="variant.id"
+                                    :to="{ name: 'ProductDetail', params: { id: product.id }, query: { variant_id: variant.id } }"
+                                    class="btn btn-outline-primary btn-sm"
+                                >
+                                    {{ formatVariantName(variant) }}
+                                </RouterLink>
+                            </div>
+                            <p v-else class="card-text text-muted">尚無規格</p>
                         </div>
                     </div>
                 </div>
@@ -185,6 +196,14 @@ onBeforeUnmount(() => {
 .scroll-sentinel {
     width: 100%;
     height: 1px;
+}
+
+.variant-links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
 }
 
 .pagination-wrapper {

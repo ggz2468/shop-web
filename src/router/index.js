@@ -33,7 +33,13 @@ const routes = [
     },
     ...authRoutes,
     ...productRoutes,
-    ...verificationRoutes
+    ...verificationRoutes,
+    {
+        path: '/:pathMatch(.*)*',
+        name: 'NotFound',
+        meta: { title: `${import.meta.env.VITE_APP_TITLE} - 404 Not Found` },
+        component: () => import('@/views/NotFound.vue'),
+    }
 ]
 
 const router = createRouter({
