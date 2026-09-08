@@ -97,6 +97,7 @@
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { authServices } from '@/services/authService'
+import { delay } from '@/utils/delay'
 
 const router = useRouter()
 
@@ -117,8 +118,6 @@ const errors = reactive({
 const isSubmitting = ref(false)
 const submitError = ref('')
 const showSuccessOverlay = ref(false)
-
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const validateForm = () => {
 	errors.idNumber = ''

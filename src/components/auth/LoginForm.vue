@@ -68,6 +68,7 @@
 import { reactive, ref } from 'vue'
 import { authServices } from '@/services/authService'
 import { setAuthenticated } from '@/composables/useAuth'
+import { delay } from '@/utils/delay'
 import { redirectAfterLogin } from '@/router'
 
 const form = reactive({
@@ -83,8 +84,6 @@ const errors = reactive({
 const isSubmitting = ref(false)
 const submitError = ref('')
 const showSuccessOverlay = ref(false)
-
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const validateForm = () => {
 	errors.email = ''

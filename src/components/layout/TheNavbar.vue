@@ -91,6 +91,13 @@ onBeforeUnmount(() => {
                             </form>
                         </div>
                     </div>
+                    <RouterLink
+                        class="navbar-icon-button"
+                        :to="{ name: 'Cart' }"
+                        aria-label="購物車"
+                    >
+                        <font-awesome-icon icon="cart-shopping" />
+                    </RouterLink>
                     <div class="user-menu" ref="userMenuRef">
                         <button
                             class="navbar-icon-button"

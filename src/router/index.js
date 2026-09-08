@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import authRoutes from './modules/auth'
+import cartRoutes from './modules/cart'
+import orderRoutes from './modules/order'
 import productRoutes from './modules/product'
 import verificationRoutes from './modules/verification'
 
@@ -32,6 +34,8 @@ const routes = [
         component: () => import('@/views/Home.vue'),
     },
     ...authRoutes,
+    ...cartRoutes,
+    ...orderRoutes,
     ...productRoutes,
     ...verificationRoutes,
     {

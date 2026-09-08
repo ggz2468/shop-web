@@ -1,7 +1,9 @@
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { productServices } from '@/services/productService'
+import { cartServices } from '@/services/cartService'
+import { resolveApiErrorMessage } from '@/utils/apiError'
 import NotFound from '@/views/NotFound.vue'
 import CenteredState from '@/components/layout/CenteredState.vue'
 import { getProductVariants, formatVariantName } from '@/utils/productVariant'
@@ -11,6 +13,10 @@ const product = ref({})
 const productLoaded = ref(false)
 const productNotFound = ref(false)
 const currencyFormatter = new Intl.NumberFormat('zh-TW')
+const addToCartMessage = ref('')
+const addToCartError = ref('')
+const addingToCart = ref(false)
+const quantity = ref(1)
 
 const productVariants = computed(() => getProductVariants(product.value))
 const showProductNotFound = () => {
@@ -68,6 +74,44 @@ const selectedVariantStockQuantity = computed(() => {
     return stockQuantity > 0 ? `庫存 ${stockQuantity} 件` : '暫無庫存'
 })
 
+const canAddToCart = computed(() => {
+    if (!selectedVariant.value) {
+        return false
+    }
+
+    return (Number(selectedVariant.value.stock_quantity) || 0) > 0
+})
+
+const handleAddToCart = async () => {
+    if (!selectedVariant.value || addingToCart.value) {
+        return
+    }
+
+    const requestedQuantity = Number(quantity.value)
+
+    if (!Number.isInteger(requestedQuantity) || requestedQuantity < 1) {
+        addToCartMessage.value = ''
+        addToCartError.value = '購買數量必須為大於等於 1 的整數。'
+        return
+    }
+
+    addingToCart.value = true
+    addToCartMessage.value = ''
+    addToCartError.value = ''
+
+    try {
+        await cartServices.addItem({
+            product_variant_id: selectedVariant.value.id,
+            quantity: requestedQuantity,
+        })
+        addToCartMessage.value = '已加入購物車。'
+    } catch (error) {
+        addToCartError.value = resolveApiErrorMessage(error, '加入購物車失敗，請稍後再試。') ?? ''
+    } finally {
+        addingToCart.value = false
+    }
+}
+
 onMounted(async () => {
     const id = route.params.id
     try {
@@ -89,6 +133,11 @@ onMounted(async () => {
     }
 
     productLoaded.value = true
+})
+
+// 切換規格時重設購買數量，避免帶入不適用的舊值
+watch(selectedVariant, () => {
+    quantity.value = 1
 })
 </script>
 
@@ -121,9 +170,40 @@ onMounted(async () => {
                         <span class="d-block">{{ selectedVariantPrice }}</span>
                         <span class="d-block">{{ selectedVariantStockQuantity }}</span>
                     </p>
-                    <button class="btn btn-primary">加入購物車</button>
+                    <div v-if="addToCartMessage" class="alert alert-success" role="alert">
+                        {{ addToCartMessage }}
+                    </div>
+                    <div v-if="addToCartError" class="alert alert-danger" role="alert">
+                        {{ addToCartError }}
+                    </div>
+                    <div class="mb-3 quantity-field">
+                        <label for="cart-quantity" class="form-label">購買數量</label>
+                        <input
+                            id="cart-quantity"
+                            v-model.number="quantity"
+                            type="number"
+                            min="1"
+                            class="form-control"
+                            :disabled="!canAddToCart || addingToCart"
+                        >
+                    </div>
+                    <button
+                        class="btn btn-primary"
+                        :disabled="!canAddToCart || addingToCart"
+                        @click="handleAddToCart"
+                    >
+                        {{ addingToCart ? '加入中...' : '加入購物車' }}
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 </template>
+
+<style scoped>
+.quantity-field {
+    max-width: 8rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+</style>

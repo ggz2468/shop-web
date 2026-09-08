@@ -15,7 +15,7 @@ import 'vue-awesome-paginate/dist/style.css'
 // 引入 Font Awesome
 import { library } from '@fortawesome/fontawesome-svg-core'
 import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome'
-import { faUser, faHouse, faSearch } from '@fortawesome/free-solid-svg-icons'
+import { faUser, faHouse, faSearch, faCartShopping } from '@fortawesome/free-solid-svg-icons'
 
 // 引入共用 CSS, JS
 import '@/assets/css/common.css'
@@ -24,7 +24,7 @@ import '@/assets/css/common.css'
 import TheNavbar from '@/components/layout/TheNavbar.vue'
 
 // 將圖示加入圖示庫
-library.add(faUser, faHouse, faSearch)
+library.add(faUser, faHouse, faSearch, faCartShopping)
 
 const app = createApp(App)
 
