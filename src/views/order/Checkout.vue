@@ -2,18 +2,22 @@
 import { computed, onMounted, ref } from 'vue'
 import { orderServices } from '@/services/orderService'
 import { useCart } from '@/composables/useCart'
+import { useCheckoutStoreSelection } from '@/composables/useCheckoutStoreSelection'
 import { resolveApiErrorMessage } from '@/utils/apiError'
-import { delay } from '@/utils/delay'
-import { PAYMENT_METHODS, DEFAULT_PAYMENT_METHOD } from '@/utils/payment'
+import { fetchPaymentCheckout } from '@/utils/paymentCheckout'
+import {
+    PAYMENT_METHODS,
+    DEFAULT_PAYMENT_METHOD,
+    SHIPPING_METHODS,
+    STORE_TYPES,
+    DEFAULT_SHIPPING_METHOD,
+} from '@/utils/payment'
 import CartItemProduct from '@/components/cart/CartItemProduct.vue'
 import CenteredState from '@/components/layout/CenteredState.vue'
 
-// 付款資料由背景任務產生，需輪詢等待其就緒
-const PAYMENT_CHECKOUT_MAX_ATTEMPTS = 10
-const PAYMENT_CHECKOUT_RETRY_INTERVAL = 1000
-
 const { items, totalQuantity, loading, errorMessage, hasItems, loadCart } = useCart()
 const paymentMethod = ref(DEFAULT_PAYMENT_METHOD)
+const shippingMethod = ref(DEFAULT_SHIPPING_METHOD)
 const submitting = ref(false)
 const order = ref(null)
 const paymentCheckout = ref(null)
@@ -21,24 +25,41 @@ const paymentFormRef = ref(null)
 // 同一次結帳沿用相同的冪等鍵，避免重試時建立重複訂單
 let idempotencyKey = null
 
+const {
+    storeType,
+    storeCode,
+    storeName,
+    storeAddress,
+    selectingStore,
+    loadingStoreSelection,
+    storeSelectionMessage,
+    storeMapCheckout,
+    storeMapFormRef,
+    storeMapFormInputs,
+    isConvenienceStore,
+    hasSelectedStore,
+    resetStoreFields,
+    handleStoreTypeChange,
+    getStorePayload,
+    validateStoreSelection,
+    loadStoreSelection,
+    handleSelectStore,
+} = useCheckoutStoreSelection({ shippingMethod, submitting, paymentCheckout, errorMessage })
+
 const paymentFormInputs = computed(() => Object.entries(paymentCheckout.value?.request_payload ?? {}))
 
-const fetchPaymentCheckout = async (orderId) => {
-    for (let attempt = 0; attempt < PAYMENT_CHECKOUT_MAX_ATTEMPTS; attempt += 1) {
-        const response = await orderServices.getPaymentCheckout(orderId)
-
-        if (response.status === 200) {
-            return response.data?.data ?? null
-        }
-
-        await delay(PAYMENT_CHECKOUT_RETRY_INTERVAL)
-    }
-
-    return null
-}
+const buildOrderPayload = () => ({
+    payment_method: paymentMethod.value,
+    shipping_method: shippingMethod.value,
+    ...(isConvenienceStore.value ? getStorePayload() : {}),
+})
 
 const handleConfirmOrder = async () => {
     if (submitting.value || !hasItems.value) {
+        return
+    }
+
+    if (!validateStoreSelection()) {
         return
     }
 
@@ -47,7 +68,7 @@ const handleConfirmOrder = async () => {
     idempotencyKey = idempotencyKey ?? crypto.randomUUID()
 
     try {
-        const orderResponse = await orderServices.createOrder({ payment_method: paymentMethod.value }, idempotencyKey)
+        const orderResponse = await orderServices.createOrder(buildOrderPayload(), idempotencyKey)
         order.value = orderResponse.data?.data ?? null
 
         if (!order.value?.id) {
@@ -74,7 +95,10 @@ const submitPaymentForm = () => {
     paymentFormRef.value?.submit()
 }
 
-onMounted(loadCart)
+onMounted(async () => {
+    await loadCart()
+    await loadStoreSelection()
+})
 </script>
 
 <template>
@@ -136,11 +160,83 @@ onMounted(loadCart)
                         </select>
                     </div>
 
+                    <div class="checkout-panel__field">
+                        <label for="checkout-shipping-method" class="form-label">配送方式</label>
+                        <select
+                            id="checkout-shipping-method"
+                            v-model.number="shippingMethod"
+                            class="form-select"
+                            :disabled="submitting || paymentCheckout !== null"
+                            @change="!isConvenienceStore && resetStoreFields()"
+                        >
+                            <option v-for="method in SHIPPING_METHODS" :key="method.value" :value="method.value">
+                                {{ method.label }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div v-if="isConvenienceStore" class="checkout-store-fields">
+                        <div class="checkout-panel__field">
+                            <label for="checkout-store-type" class="form-label">超商類型</label>
+                            <select
+                                id="checkout-store-type"
+                                v-model="storeType"
+                                class="form-select"
+                                :disabled="submitting || selectingStore || paymentCheckout !== null"
+                                required
+                                @change="handleStoreTypeChange"
+                            >
+                                <option value="" disabled>請選擇超商類型</option>
+                                <option v-for="store in STORE_TYPES" :key="store.value" :value="store.value">
+                                    {{ store.label }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <form
+                            v-if="storeMapCheckout"
+                            ref="storeMapFormRef"
+                            :action="storeMapCheckout.checkout_payload.action"
+                            :method="storeMapCheckout.checkout_payload.method"
+                        >
+                            <input
+                                v-for="[name, value] in storeMapFormInputs"
+                                :key="name"
+                                type="hidden"
+                                :name="name"
+                                :value="value"
+                            >
+                        </form>
+
+                        <button
+                            type="button"
+                            class="btn btn-outline-primary"
+                            :disabled="!storeType || submitting || selectingStore || paymentCheckout !== null"
+                            @click="handleSelectStore"
+                        >
+                            {{ selectingStore ? '開啟電子地圖中...' : '選擇超商門市' }}
+                        </button>
+
+                        <div v-if="loadingStoreSelection" class="text-secondary small">
+                            取得超商門市資訊中...
+                        </div>
+
+                        <div v-else-if="hasSelectedStore" class="selected-store">
+                            <div class="selected-store__title">已選擇門市</div>
+                            <div>{{ storeName }}（{{ storeCode }}）</div>
+                            <div>{{ storeAddress }}</div>
+                        </div>
+
+                        <div v-else-if="storeSelectionMessage" class="text-secondary small">
+                            {{ storeSelectionMessage }}
+                        </div>
+                    </div>
+
                     <button
                         v-if="!paymentCheckout"
                         type="button"
                         class="btn btn-primary"
-                        :disabled="submitting"
+                        :disabled="submitting || (isConvenienceStore && !hasSelectedStore)"
                         @click="handleConfirmOrder"
                     >
                         {{ submitting ? '處理中...' : '確認結帳' }}
@@ -198,8 +294,31 @@ onMounted(loadCart)
     width: min(100%, 16rem);
 }
 
+.checkout-store-fields {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    width: min(100%, 22rem);
+}
+
 .checkout-panel__order {
     margin: 0;
     text-align: center;
+}
+
+.selected-store {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d7e7dd;
+    border-radius: 0.5rem;
+    background: #f6fbf7;
+    color: #1f3d2a;
+    text-align: left;
+}
+
+.selected-store__title {
+    margin-bottom: 0.25rem;
+    font-weight: 600;
 }
 </style>
