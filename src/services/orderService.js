@@ -1,6 +1,7 @@
 import http from '@/plugins/axios'
 
 export const orderServices = {
+    getOrderOptions: () => http.get('/orders/options'),
     createOrder: (data, idempotencyKey) => http.post('/orders', data, {
         headers: { 'Idempotency-Key': idempotencyKey },
     }),

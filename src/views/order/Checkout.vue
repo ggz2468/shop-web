@@ -3,27 +3,35 @@ import { computed, onMounted, ref } from 'vue'
 import { orderServices } from '@/services/orderService'
 import { useCart } from '@/composables/useCart'
 import { useCheckoutStoreSelection } from '@/composables/useCheckoutStoreSelection'
+import { useOrderOptions } from '@/composables/useOrderOptions'
 import { resolveApiErrorMessage } from '@/utils/apiError'
 import { fetchPaymentCheckout } from '@/utils/paymentCheckout'
-import {
-    PAYMENT_METHODS,
-    DEFAULT_PAYMENT_METHOD,
-    SHIPPING_METHODS,
-    STORE_TYPES,
-    DEFAULT_SHIPPING_METHOD,
-} from '@/utils/payment'
 import CartItemProduct from '@/components/cart/CartItemProduct.vue'
 import CenteredState from '@/components/layout/CenteredState.vue'
 
 const { items, totalQuantity, loading, errorMessage, hasItems, loadCart } = useCart()
-const paymentMethod = ref(DEFAULT_PAYMENT_METHOD)
-const shippingMethod = ref(DEFAULT_SHIPPING_METHOD)
+const paymentMethod = ref(null)
+const shippingMethod = ref(null)
 const submitting = ref(false)
 const order = ref(null)
 const paymentCheckout = ref(null)
 const paymentFormRef = ref(null)
 // 同一次結帳沿用相同的冪等鍵，避免重試時建立重複訂單
 let idempotencyKey = null
+
+const {
+    paymentMethods,
+    shippingMethods,
+    storeTypes,
+    defaultPaymentMethod,
+    defaultShippingMethod,
+    convenienceStoreShippingMethod,
+    hasOrderOptions,
+    loadingOrderOptions,
+    loadOrderOptions,
+} = useOrderOptions({ errorMessage })
+
+const loadingCheckout = computed(() => loading.value || loadingOrderOptions.value)
 
 const {
     storeType,
@@ -44,7 +52,13 @@ const {
     validateStoreSelection,
     loadStoreSelection,
     handleSelectStore,
-} = useCheckoutStoreSelection({ shippingMethod, submitting, paymentCheckout, errorMessage })
+} = useCheckoutStoreSelection({
+    shippingMethod,
+    convenienceStoreShippingMethod,
+    submitting,
+    paymentCheckout,
+    errorMessage,
+})
 
 const paymentFormInputs = computed(() => Object.entries(paymentCheckout.value?.request_payload ?? {}))
 
@@ -55,7 +69,7 @@ const buildOrderPayload = () => ({
 })
 
 const handleConfirmOrder = async () => {
-    if (submitting.value || !hasItems.value) {
+    if (submitting.value || !hasItems.value || !hasOrderOptions.value) {
         return
     }
 
@@ -96,7 +110,13 @@ const submitPaymentForm = () => {
 }
 
 onMounted(async () => {
-    await loadCart()
+    await Promise.all([
+        loadCart(),
+        loadOrderOptions(),
+    ])
+
+    paymentMethod.value = defaultPaymentMethod.value
+    shippingMethod.value = defaultShippingMethod.value
     await loadStoreSelection()
 })
 </script>
@@ -113,7 +133,7 @@ onMounted(async () => {
                 {{ errorMessage }}
             </div>
 
-            <div v-if="loading" class="text-center py-5">載入中...</div>
+            <div v-if="loadingCheckout" class="text-center py-5">載入中...</div>
 
             <CenteredState
                 v-else-if="!hasItems"
@@ -152,9 +172,9 @@ onMounted(async () => {
                             id="checkout-payment-method"
                             v-model.number="paymentMethod"
                             class="form-select"
-                            :disabled="submitting || paymentCheckout !== null"
+                            :disabled="submitting || paymentCheckout !== null || !hasOrderOptions"
                         >
-                            <option v-for="method in PAYMENT_METHODS" :key="method.value" :value="method.value">
+                            <option v-for="method in paymentMethods" :key="method.value" :value="method.value">
                                 {{ method.label }}
                             </option>
                         </select>
@@ -166,10 +186,10 @@ onMounted(async () => {
                             id="checkout-shipping-method"
                             v-model.number="shippingMethod"
                             class="form-select"
-                            :disabled="submitting || paymentCheckout !== null"
+                            :disabled="submitting || paymentCheckout !== null || !hasOrderOptions"
                             @change="!isConvenienceStore && resetStoreFields()"
                         >
-                            <option v-for="method in SHIPPING_METHODS" :key="method.value" :value="method.value">
+                            <option v-for="method in shippingMethods" :key="method.value" :value="method.value">
                                 {{ method.label }}
                             </option>
                         </select>
@@ -187,7 +207,7 @@ onMounted(async () => {
                                 @change="handleStoreTypeChange"
                             >
                                 <option value="" disabled>請選擇超商類型</option>
-                                <option v-for="store in STORE_TYPES" :key="store.value" :value="store.value">
+                                <option v-for="store in storeTypes" :key="store.value" :value="store.value">
                                     {{ store.label }}
                                 </option>
                             </select>
@@ -236,7 +256,7 @@ onMounted(async () => {
                         v-if="!paymentCheckout"
                         type="button"
                         class="btn btn-primary"
-                        :disabled="submitting || (isConvenienceStore && !hasSelectedStore)"
+                        :disabled="submitting || !hasOrderOptions || (isConvenienceStore && !hasSelectedStore)"
                         @click="handleConfirmOrder"
                     >
                         {{ submitting ? '處理中...' : '確認結帳' }}

@@ -1,13 +1,12 @@
 import { computed, nextTick, ref } from 'vue'
 import { shipmentStoreMapRequestServices } from '@/services/shipmentStoreMapRequestService'
 import { resolveApiErrorMessage } from '@/utils/apiError'
-import { CONVENIENCE_STORE_SHIPPING_METHOD } from '@/utils/payment'
 
 const STORE_MAP_SELECTION_TOKEN_STORAGE_KEY = 'checkout.storeMapSelectionToken'
 const STORE_MAP_SHIPPING_METHOD_STORAGE_KEY = 'checkout.storeMapShippingMethod'
 const STORE_MAP_STORE_TYPE_STORAGE_KEY = 'checkout.storeMapStoreType'
 
-export const useCheckoutStoreSelection = ({ shippingMethod, submitting, paymentCheckout, errorMessage }) => {
+export const useCheckoutStoreSelection = ({ shippingMethod, convenienceStoreShippingMethod, submitting, paymentCheckout, errorMessage }) => {
     const storeType = ref('')
     const storeCode = ref('')
     const storeName = ref('')
@@ -19,7 +18,10 @@ export const useCheckoutStoreSelection = ({ shippingMethod, submitting, paymentC
     const storeMapFormRef = ref(null)
 
     const storeMapFormInputs = computed(() => Object.entries(storeMapCheckout.value?.request_payload ?? {}))
-    const isConvenienceStore = computed(() => shippingMethod.value === CONVENIENCE_STORE_SHIPPING_METHOD)
+    const isConvenienceStore = computed(() => (
+        convenienceStoreShippingMethod.value !== null
+        && shippingMethod.value === convenienceStoreShippingMethod.value
+    ))
     const hasSelectedStore = computed(() => Boolean(storeCode.value.trim() && storeName.value.trim() && storeAddress.value.trim()))
 
     const clearSelectedStore = () => {
@@ -70,7 +72,7 @@ export const useCheckoutStoreSelection = ({ shippingMethod, submitting, paymentC
         const storedShippingMethod = Number(sessionStorage.getItem(STORE_MAP_SHIPPING_METHOD_STORAGE_KEY))
         const storedStoreType = sessionStorage.getItem(STORE_MAP_STORE_TYPE_STORAGE_KEY)
 
-        shippingMethod.value = storedShippingMethod || CONVENIENCE_STORE_SHIPPING_METHOD
+        shippingMethod.value = storedShippingMethod || convenienceStoreShippingMethod.value || shippingMethod.value
         storeType.value = storedStoreType || selectionResult.store_type || storeType.value
         storeCode.value = selectionResult.store?.code ?? ''
         storeName.value = selectionResult.store?.name ?? ''
