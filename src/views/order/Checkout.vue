@@ -12,6 +12,9 @@ import CenteredState from '@/components/layout/CenteredState.vue'
 const { items, totalQuantity, loading, errorMessage, hasItems, loadCart } = useCart()
 const paymentMethod = ref(null)
 const shippingMethod = ref(null)
+const recipientName = ref('')
+const recipientPhone = ref('')
+const recipientAddress = ref('')
 const submitting = ref(false)
 const order = ref(null)
 const paymentCheckout = ref(null)
@@ -26,12 +29,22 @@ const {
     defaultPaymentMethod,
     defaultShippingMethod,
     convenienceStoreShippingMethod,
+    homeDeliveryShippingMethod,
     hasOrderOptions,
     loadingOrderOptions,
     loadOrderOptions,
 } = useOrderOptions({ errorMessage })
 
 const loadingCheckout = computed(() => loading.value || loadingOrderOptions.value)
+const isHomeDelivery = computed(() => (
+    homeDeliveryShippingMethod.value !== null
+    && shippingMethod.value === homeDeliveryShippingMethod.value
+))
+const hasRequiredRecipientFields = computed(() => Boolean(
+    recipientName.value.trim()
+    && recipientPhone.value.trim()
+    && (!isHomeDelivery.value || recipientAddress.value.trim())
+))
 
 const {
     storeType,
@@ -65,11 +78,32 @@ const paymentFormInputs = computed(() => Object.entries(paymentCheckout.value?.r
 const buildOrderPayload = () => ({
     payment_method: paymentMethod.value,
     shipping_method: shippingMethod.value,
+    recipient_name: recipientName.value.trim(),
+    recipient_phone: recipientPhone.value.trim(),
+    ...(isHomeDelivery.value ? { recipient_address: recipientAddress.value.trim() } : {}),
     ...(isConvenienceStore.value ? getStorePayload() : {}),
 })
 
+const validateRecipientInformation = () => {
+    if (!recipientName.value.trim() || !recipientPhone.value.trim()) {
+        errorMessage.value = '請填寫收件人姓名與電話。'
+        return false
+    }
+
+    if (isHomeDelivery.value && !recipientAddress.value.trim()) {
+        errorMessage.value = '宅配到家需填寫收件地址。'
+        return false
+    }
+
+    return true
+}
+
 const handleConfirmOrder = async () => {
     if (submitting.value || !hasItems.value || !hasOrderOptions.value) {
+        return
+    }
+
+    if (!validateRecipientInformation()) {
         return
     }
 
@@ -195,6 +229,47 @@ onMounted(async () => {
                         </select>
                     </div>
 
+                    <div class="checkout-recipient-fields">
+                        <div class="checkout-panel__field">
+                            <label for="checkout-recipient-name" class="form-label">收件人姓名</label>
+                            <input
+                                id="checkout-recipient-name"
+                                v-model.trim="recipientName"
+                                type="text"
+                                class="form-control"
+                                maxlength="50"
+                                required
+                                :disabled="submitting || paymentCheckout !== null"
+                            >
+                        </div>
+
+                        <div class="checkout-panel__field">
+                            <label for="checkout-recipient-phone" class="form-label">收件人電話</label>
+                            <input
+                                id="checkout-recipient-phone"
+                                v-model.trim="recipientPhone"
+                                type="tel"
+                                class="form-control"
+                                maxlength="20"
+                                required
+                                :disabled="submitting || paymentCheckout !== null"
+                            >
+                        </div>
+
+                        <div v-if="isHomeDelivery" class="checkout-panel__field checkout-panel__field--wide">
+                            <label for="checkout-recipient-address" class="form-label">收件地址</label>
+                            <input
+                                id="checkout-recipient-address"
+                                v-model.trim="recipientAddress"
+                                type="text"
+                                class="form-control"
+                                maxlength="500"
+                                required
+                                :disabled="submitting || paymentCheckout !== null"
+                            >
+                        </div>
+                    </div>
+
                     <div v-if="isConvenienceStore" class="checkout-store-fields">
                         <div class="checkout-panel__field">
                             <label for="checkout-store-type" class="form-label">超商類型</label>
@@ -256,7 +331,7 @@ onMounted(async () => {
                         v-if="!paymentCheckout"
                         type="button"
                         class="btn btn-primary"
-                        :disabled="submitting || !hasOrderOptions || (isConvenienceStore && !hasSelectedStore)"
+                        :disabled="submitting || !hasOrderOptions || !hasRequiredRecipientFields || (isConvenienceStore && !hasSelectedStore)"
                         @click="handleConfirmOrder"
                     >
                         {{ submitting ? '處理中...' : '確認結帳' }}
@@ -312,6 +387,18 @@ onMounted(async () => {
 
 .checkout-panel__field {
     width: min(100%, 16rem);
+}
+
+.checkout-panel__field--wide {
+    width: min(100%, 22rem);
+}
+
+.checkout-recipient-fields {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    width: min(100%, 22rem);
 }
 
 .checkout-store-fields {

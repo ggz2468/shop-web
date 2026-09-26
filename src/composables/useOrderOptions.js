@@ -3,6 +3,7 @@ import { orderServices } from '@/services/orderService'
 import { resolveApiErrorMessage } from '@/utils/apiError'
 import {
     CONVENIENCE_STORE_SHIPPING_METHOD_CODE,
+    HOME_DELIVERY_SHIPPING_METHOD_CODE,
     findOptionValueByCode,
     normalizeOrderOptions,
 } from '@/utils/orderOptions'
@@ -18,6 +19,10 @@ export const useOrderOptions = ({ errorMessage } = {}) => {
     const convenienceStoreShippingMethod = computed(() => findOptionValueByCode(
         shippingMethods.value,
         CONVENIENCE_STORE_SHIPPING_METHOD_CODE,
+    ))
+    const homeDeliveryShippingMethod = computed(() => findOptionValueByCode(
+        shippingMethods.value,
+        HOME_DELIVERY_SHIPPING_METHOD_CODE,
     ))
 
     const hasOrderOptions = computed(() => (
@@ -58,6 +63,7 @@ export const useOrderOptions = ({ errorMessage } = {}) => {
         defaultPaymentMethod,
         defaultShippingMethod,
         convenienceStoreShippingMethod,
+        homeDeliveryShippingMethod,
         hasOrderOptions,
         loadingOrderOptions,
         loadOrderOptions,

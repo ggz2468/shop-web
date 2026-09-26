@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
     CONVENIENCE_STORE_SHIPPING_METHOD_CODE,
+    HOME_DELIVERY_SHIPPING_METHOD_CODE,
     findOptionValueByCode,
     normalizeOrderOptions,
 } from '@/utils/orderOptions'
@@ -36,10 +37,11 @@ describe('orderOptions', () => {
 
     it('依 code 取得選項 value', () => {
         const options = [
-            { value: 1, code: 'HOME_DELIVERY' },
+            { value: 1, code: HOME_DELIVERY_SHIPPING_METHOD_CODE },
             { value: 2, code: CONVENIENCE_STORE_SHIPPING_METHOD_CODE },
         ]
 
+        expect(findOptionValueByCode(options, HOME_DELIVERY_SHIPPING_METHOD_CODE)).toBe(1)
         expect(findOptionValueByCode(options, CONVENIENCE_STORE_SHIPPING_METHOD_CODE)).toBe(2)
         expect(findOptionValueByCode(options, 'UNKNOWN')).toBeNull()
     })

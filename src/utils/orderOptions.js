@@ -1,3 +1,4 @@
+export const HOME_DELIVERY_SHIPPING_METHOD_CODE = 'HOME_DELIVERY'
 export const CONVENIENCE_STORE_SHIPPING_METHOD_CODE = 'CONVENIENCE_STORE'
 
 export const normalizeOrderOptions = (data = {}) => ({
