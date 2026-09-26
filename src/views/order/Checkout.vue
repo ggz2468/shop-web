@@ -14,6 +14,7 @@ const paymentMethod = ref(null)
 const shippingMethod = ref(null)
 const recipientName = ref('')
 const recipientPhone = ref('')
+const recipientZipCode = ref('')
 const recipientAddress = ref('')
 const submitting = ref(false)
 const order = ref(null)
@@ -43,7 +44,7 @@ const isHomeDelivery = computed(() => (
 const hasRequiredRecipientFields = computed(() => Boolean(
     recipientName.value.trim()
     && recipientPhone.value.trim()
-    && (!isHomeDelivery.value || recipientAddress.value.trim())
+    && (!isHomeDelivery.value || (recipientZipCode.value.trim() && recipientAddress.value.trim()))
 ))
 
 const {
@@ -80,7 +81,10 @@ const buildOrderPayload = () => ({
     shipping_method: shippingMethod.value,
     recipient_name: recipientName.value.trim(),
     recipient_phone: recipientPhone.value.trim(),
-    ...(isHomeDelivery.value ? { recipient_address: recipientAddress.value.trim() } : {}),
+    ...(isHomeDelivery.value ? {
+        recipient_zip_code: recipientZipCode.value.trim(),
+        recipient_address: recipientAddress.value.trim(),
+    } : {}),
     ...(isConvenienceStore.value ? getStorePayload() : {}),
 })
 
@@ -90,8 +94,8 @@ const validateRecipientInformation = () => {
         return false
     }
 
-    if (isHomeDelivery.value && !recipientAddress.value.trim()) {
-        errorMessage.value = '宅配到家需填寫收件地址。'
+    if (isHomeDelivery.value && (!recipientZipCode.value.trim() || !recipientAddress.value.trim())) {
+        errorMessage.value = '宅配到家需填寫收件郵遞區號與地址。'
         return false
     }
 
@@ -251,6 +255,19 @@ onMounted(async () => {
                                 type="tel"
                                 class="form-control"
                                 maxlength="20"
+                                required
+                                :disabled="submitting || paymentCheckout !== null"
+                            >
+                        </div>
+
+                        <div v-if="isHomeDelivery" class="checkout-panel__field">
+                            <label for="checkout-recipient-zip-code" class="form-label">收件郵遞區號</label>
+                            <input
+                                id="checkout-recipient-zip-code"
+                                v-model.trim="recipientZipCode"
+                                type="text"
+                                class="form-control"
+                                maxlength="10"
                                 required
                                 :disabled="submitting || paymentCheckout !== null"
                             >
