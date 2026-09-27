@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { orderServices } from '@/services/orderService'
 import { useCart } from '@/composables/useCart'
+import { useCheckoutRecipientInformation } from '@/composables/useCheckoutRecipientInformation'
 import { useCheckoutStoreSelection } from '@/composables/useCheckoutStoreSelection'
 import { useOrderOptions } from '@/composables/useOrderOptions'
 import { resolveApiErrorMessage } from '@/utils/apiError'
@@ -12,10 +13,6 @@ import CenteredState from '@/components/layout/CenteredState.vue'
 const { items, totalQuantity, loading, errorMessage, hasItems, loadCart } = useCart()
 const paymentMethod = ref(null)
 const shippingMethod = ref(null)
-const recipientName = ref('')
-const recipientPhone = ref('')
-const recipientZipCode = ref('')
-const recipientAddress = ref('')
 const submitting = ref(false)
 const order = ref(null)
 const paymentCheckout = ref(null)
@@ -41,11 +38,18 @@ const isHomeDelivery = computed(() => (
     homeDeliveryShippingMethod.value !== null
     && shippingMethod.value === homeDeliveryShippingMethod.value
 ))
-const hasRequiredRecipientFields = computed(() => Boolean(
-    recipientName.value.trim()
-    && recipientPhone.value.trim()
-    && (!isHomeDelivery.value || (recipientZipCode.value.trim() && recipientAddress.value.trim()))
-))
+
+const {
+    recipientName,
+    recipientPhone,
+    recipientZipCode,
+    recipientAddress,
+    hasRequiredRecipientFields,
+    clearRecipientInformation,
+    restoreRecipientInformation,
+    getRecipientPayload,
+    validateRecipientInformation,
+} = useCheckoutRecipientInformation({ isHomeDelivery, errorMessage })
 
 const {
     storeType,
@@ -79,28 +83,9 @@ const paymentFormInputs = computed(() => Object.entries(paymentCheckout.value?.r
 const buildOrderPayload = () => ({
     payment_method: paymentMethod.value,
     shipping_method: shippingMethod.value,
-    recipient_name: recipientName.value.trim(),
-    recipient_phone: recipientPhone.value.trim(),
-    ...(isHomeDelivery.value ? {
-        recipient_zip_code: recipientZipCode.value.trim(),
-        recipient_address: recipientAddress.value.trim(),
-    } : {}),
+    ...getRecipientPayload(),
     ...(isConvenienceStore.value ? getStorePayload() : {}),
 })
-
-const validateRecipientInformation = () => {
-    if (!recipientName.value.trim() || !recipientPhone.value.trim()) {
-        errorMessage.value = '請填寫收件人姓名與電話。'
-        return false
-    }
-
-    if (isHomeDelivery.value && (!recipientZipCode.value.trim() || !recipientAddress.value.trim())) {
-        errorMessage.value = '宅配到家需填寫收件郵遞區號與地址。'
-        return false
-    }
-
-    return true
-}
 
 const handleConfirmOrder = async () => {
     if (submitting.value || !hasItems.value || !hasOrderOptions.value) {
@@ -136,6 +121,7 @@ const handleConfirmOrder = async () => {
         }
 
         paymentCheckout.value = checkout
+        clearRecipientInformation()
     } catch (error) {
         errorMessage.value = resolveApiErrorMessage(error, '結帳失敗，請稍後再試。') ?? ''
     } finally {
@@ -148,6 +134,8 @@ const submitPaymentForm = () => {
 }
 
 onMounted(async () => {
+    restoreRecipientInformation()
+
     await Promise.all([
         loadCart(),
         loadOrderOptions(),
