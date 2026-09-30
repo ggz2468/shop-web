@@ -80,6 +80,22 @@ const {
 
 const paymentFormInputs = computed(() => Object.entries(paymentCheckout.value?.request_payload ?? {}))
 
+const createIdempotencyKey = () => {
+    if (typeof globalThis.crypto?.randomUUID === 'function') {
+        return globalThis.crypto.randomUUID()
+    }
+
+    const randomValues = new Uint8Array(16)
+    globalThis.crypto?.getRandomValues?.(randomValues)
+
+    randomValues[6] = (randomValues[6] & 0x0f) | 0x40
+    randomValues[8] = (randomValues[8] & 0x3f) | 0x80
+
+    const hex = Array.from(randomValues, value => value.toString(16).padStart(2, '0')).join('')
+
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
 const buildOrderPayload = () => ({
     payment_method: paymentMethod.value,
     shipping_method: shippingMethod.value,
@@ -102,9 +118,9 @@ const handleConfirmOrder = async () => {
 
     submitting.value = true
     errorMessage.value = ''
-    idempotencyKey = idempotencyKey ?? crypto.randomUUID()
 
     try {
+        idempotencyKey = idempotencyKey ?? createIdempotencyKey()
         const orderResponse = await orderServices.createOrder(buildOrderPayload(), idempotencyKey)
         order.value = orderResponse.data?.data ?? null
 

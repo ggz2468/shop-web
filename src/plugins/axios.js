@@ -1,7 +1,7 @@
 import axios from 'axios'
 import router from '@/router'
 
-const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost/api'
+const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://shop.test/api'
 const csrfCookieUrl = import.meta.env.VITE_SANCTUM_CSRF_COOKIE_URL || `${apiBaseUrl.replace(/\/api\/?$/, '')}/sanctum/csrf-cookie`
 const LOGIN_REQUIRED_API_PATH_REGEX = /^\/?(cart|orders|shipment-store-map-requests)(\/|$)/
 
