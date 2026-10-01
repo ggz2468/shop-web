@@ -9,7 +9,7 @@ import Pagination from '@/components/layout/Pagination.vue'
 let observer = null
 const apiUrlPath = '/products'
 const route = useRoute()
-const isHomePage = window.location.pathname === '/'
+const isHomePage = computed(() => route.path === '/')
 const mobileMediaQuery = window.matchMedia('(max-width: 767.98px)')
 const isMobile = ref(mobileMediaQuery.matches)
 const initialPage = Number.parseInt(String(route.query.page ?? '1'), 10)
@@ -22,9 +22,9 @@ const params = reactive({
     row_counts_per_page: DEFAULT_ROW_COUNTS_PER_PAGE,
     page: isMobile.value ? 1 : resolvedInitialPage,
 })
-const reachedHomePageLimit = computed(() => isHomePage && mobileProducts.value.length >= HOMEPAGE_MAX_ROW_COUNTS)
+const reachedHomePageLimit = computed(() => isHomePage.value && mobileProducts.value.length >= HOMEPAGE_MAX_ROW_COUNTS)
 const remainingDesktopHomePageSlots = computed(() => {
-    if (!isHomePage || isMobile.value) {
+    if (!isHomePage.value || isMobile.value) {
         return null
     }
 
@@ -40,7 +40,7 @@ const displayedProducts = computed(() => {
         return []
     }
 
-    if (!isHomePage) {
+    if (!isHomePage.value) {
         return data.value
     }
 
@@ -84,16 +84,32 @@ const loadProducts = async (page) => {
     if (page === 1) {
         mobileProducts.value = nextProducts
     } else if (nextProducts.length > 0) {
-        mobileProducts.value = [...mobileProducts.value, ...nextProducts]
+        mobileProducts.value = Array.from(new Map([
+            ...mobileProducts.value,
+            ...nextProducts,
+        ].map((product) => [product.id, product])).values())
     }
 
-    if (isHomePage && mobileProducts.value.length > HOMEPAGE_MAX_ROW_COUNTS) {
+    if (isHomePage.value && mobileProducts.value.length > HOMEPAGE_MAX_ROW_COUNTS) {
         mobileProducts.value = mobileProducts.value.slice(0, HOMEPAGE_MAX_ROW_COUNTS)
     }
 
     if (nextProducts.length === 0 || reachedHomePageLimit.value) {
         mobileReachedEnd.value = true
     }
+}
+
+const resetToFirstPage = async () => {
+    mobileProducts.value = []
+    mobileReachedEnd.value = false
+
+    if (params.page !== 1) {
+        params.page = 1
+        return
+    }
+
+    await loadProducts(params.page)
+    await observeSentinel()
 }
 
 const handleDeviceChange = (event) => {
@@ -105,16 +121,16 @@ watch(() => params.page, async (page) => {
     await observeSentinel()
 }, { immediate: true })
 
+watch(() => route.path, async () => {
+    await resetToFirstPage()
+})
+
 watch(isMobile, async (mobile, previousMobile) => {
     if (mobile === previousMobile) {
         return
     }
 
-    mobileProducts.value = []
-    mobileReachedEnd.value = false
-    params.page = 1
-
-    await observeSentinel()
+    await resetToFirstPage()
 })
 
 watch(observerTarget, async () => {
@@ -188,7 +204,7 @@ onBeforeUnmount(() => {
             <div v-if="isMobile && !mobileReachedEnd" ref="observerTarget" class="scroll-sentinel" />
         </div>
 
-        <Pagination v-if="!isMobile" :total-items="totalItems" :items-per-page="params.row_counts_per_page" v-model="params.page" />
+        <Pagination v-if="!isMobile" :total-items="isHomePage ? Math.min(totalItems, HOMEPAGE_MAX_ROW_COUNTS) : totalItems" :items-per-page="params.row_counts_per_page" v-model="params.page" />
     </div>
 </template>
 

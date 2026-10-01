@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 import http from '@/plugins/axios'
-import { HOMEPAGE_MAX_ROW_COUNTS, DEFAULT_ROW_COUNTS_PER_PAGE } from '@/utils/pagination'
+import { DEFAULT_ROW_COUNTS_PER_PAGE } from '@/utils/pagination'
 
 const cache = new Map()
 
@@ -12,7 +12,6 @@ export const usePagination = (apiUrlPath) => {
 
     // 定義取得分頁資料的函式
     const getPageData = async (page = 1, rowCountsPerPage = DEFAULT_ROW_COUNTS_PER_PAGE) => {
-        const isHomePage = window.location.pathname === '/'
         const cacheKey = `${apiUrlPath}:${rowCountsPerPage}:${page}`
 
         // 檢查指定頁碼資料是否存在快取中
@@ -36,7 +35,7 @@ export const usePagination = (apiUrlPath) => {
             })
 
             const result = response.data.data
-            const resolvedTotalItems = isHomePage ? HOMEPAGE_MAX_ROW_COUNTS : (response.data?.meta?.total ?? result.length)
+            const resolvedTotalItems = response.data?.meta?.total ?? result.length
             data.value = result
             totalItems.value = resolvedTotalItems
             cache.set(cacheKey, {
