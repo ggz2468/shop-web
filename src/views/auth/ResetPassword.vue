@@ -83,6 +83,7 @@
 import { reactive, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { authServices } from '@/services/authService'
+import { getEmailValidationError } from '@/utils/emailValidation'
 
 const route = useRoute()
 const LOGIN_ROUTE = '/auth/login'
@@ -108,14 +109,9 @@ const validateForm = () => {
 	fieldErrors.password = ''
 	fieldErrors.password_confirmation = ''
 
-	const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 	const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/
 
-	if (!form.email) {
-		fieldErrors.email = '請輸入電子郵件'
-	} else if (!emailRegex.test(form.email)) {
-		fieldErrors.email = '電子郵件格式不正確'
-	}
+	fieldErrors.email = getEmailValidationError(form.email)
 
 	if (!form.password) {
 		fieldErrors.password = '請輸入新密碼'

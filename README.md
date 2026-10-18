@@ -32,3 +32,14 @@ cp .env.example .env
 npm run dev
 ```
 5. 本地開發網址: http://localhost:5173
+
+### 會員訂單列表
+- 登入會員可點擊導覽列的會員選單，透過「歷史訂單」進入列表；訪客僅顯示登入入口。
+- `/orders` 透過 `GET /api/orders` 顯示會員自己的歷史訂單，每頁 10 筆。
+- 狀態與付款／配送方式中文由 `GET /api/orders/options` 提供；後端須包含 `order_statuses` 與 `payment_statuses` 字典。
+- 支援載入提示、空列表、錯誤重試與分頁；未登入時沿用 API 攔截器導向登入頁。
+- 金額以新台幣呈現，下單時間以台灣時間顯示；目前不提供訂單詳情、取消或付款操作。
+
+### 前端共用模組
+- 會員相關表單共用 `src/utils/emailValidation.js` 的 Email 驗證規則與提示，輸入 trim 仍由各表單處理。
+- 登入與註冊共用 `AuthSuccessOverlay` 呈現成功提示；請求、三秒等待與導頁仍由各表單管理。

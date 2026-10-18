@@ -1,67 +1,26 @@
 <script setup>
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { authServices } from '@/services/authService'
-import { AUTH_STATE_CHANGE_EVENT, isAuthenticated, setAuthenticated } from '@/composables/useAuth'
+import UserMenu from '@/components/layout/UserMenu.vue'
 
 const isSearchOpen = ref(false)
-const isUserMenuOpen = ref(false)
-const isLoggingOut = ref(false)
-const loggedIn = ref(false)
-const userMenuRef = ref(null)
 const searchMenuRef = ref(null)
-
-const syncAuthState = async () => {
-    loggedIn.value = await isAuthenticated()
-}
 
 const toggleSearch = () => {
 	isSearchOpen.value = !isSearchOpen.value
-}
-
-const toggleUserMenu = () => {
-	isUserMenuOpen.value = !isUserMenuOpen.value
 }
 
 const handleDocumentClick = (event) => {
     if (!searchMenuRef.value?.contains(event.target)) {
         isSearchOpen.value = false
     }
-
-	if (!userMenuRef.value?.contains(event.target)) {
-		isUserMenuOpen.value = false
-	}
-}
-
-const handleAuthAction = async () => {
-	if (!loggedIn.value || isLoggingOut.value) {
-		return
-	}
-
-	isLoggingOut.value = true
-
-	try {
-		await authServices.logout()
-		setAuthenticated(false)
-		window.location.reload()
-	} catch (error) {
-		console.error('Failed to log out.', error)
-	} finally {
-		isLoggingOut.value = false
-		isUserMenuOpen.value = false
-	}
 }
 
 onMounted(() => {
-    void syncAuthState()
 	document.addEventListener('click', handleDocumentClick)
-	window.addEventListener('storage', syncAuthState)
-    window.addEventListener(AUTH_STATE_CHANGE_EVENT, syncAuthState)
 })
 
 onBeforeUnmount(() => {
 	document.removeEventListener('click', handleDocumentClick)
-	window.removeEventListener('storage', syncAuthState)
-    window.removeEventListener(AUTH_STATE_CHANGE_EVENT, syncAuthState)
 })
 </script>
 
@@ -98,35 +57,7 @@ onBeforeUnmount(() => {
                     >
                         <font-awesome-icon icon="cart-shopping" />
                     </RouterLink>
-                    <div class="user-menu" ref="userMenuRef">
-                        <button
-                            class="navbar-icon-button"
-                            type="button"
-                            aria-label="會員選單"
-                            @click="toggleUserMenu"
-                        >
-                            <font-awesome-icon icon="user" />
-                        </button>
-                        <div v-if="isUserMenuOpen" class="user-menu__panel">
-                            <RouterLink
-                                v-if="!loggedIn"
-                                class="user-menu__link"
-                                :to="{ name: 'Login' }"
-                                @click="isUserMenuOpen = false"
-                            >
-                                會員登入
-                            </RouterLink>
-                            <button
-                                v-else
-                                class="user-menu__link user-menu__button"
-                                type="button"
-                                :disabled="isLoggingOut"
-                                @click="handleAuthAction"
-                            >
-                                {{ isLoggingOut ? '處理中...' : '會員登出' }}
-                            </button>
-                        </div>
-                    </div>
+                    <UserMenu />
                 </div>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mynavbar">
                     <span class="navbar-toggler-icon"></span>
@@ -196,7 +127,7 @@ onBeforeUnmount(() => {
     width: min(22rem, calc(100vw - 3rem));
 }
 
-.navbar-icon-button {
+:deep(.navbar-icon-button) {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -208,46 +139,10 @@ onBeforeUnmount(() => {
     line-height: 1;
 }
 
-.navbar-icon-button:hover,
-.navbar-icon-button:focus-visible {
+:deep(.navbar-icon-button:hover),
+:deep(.navbar-icon-button:focus-visible) {
     color: #fff;
     outline: 0;
-}
-
-.user-menu {
-	position: relative;
-}
-
-.user-menu__panel {
-	position: absolute;
-	top: calc(100% + 0.5rem);
-	right: 0;
-	min-width: 7rem;
-	padding: 0.5rem;
-	border-radius: 0.5rem;
-	background-color: #fff;
-	box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.2);
-	z-index: 1000;
-}
-
-.user-menu__link {
-	display: block;
-	width: 100%;
-	padding: 0.25rem 0.5rem;
-	color: #212529;
-	text-decoration: none;
-	text-align: left;
-	white-space: nowrap;
-}
-
-.user-menu__button {
-	border: 0;
-	background: transparent;
-}
-
-.user-menu__link:hover,
-.user-menu__button:hover {
-	color: #0d6efd;
 }
 
 @media (min-width: 576px) {

@@ -46,6 +46,7 @@
 <script setup>
 import { ref } from 'vue'
 import { authServices } from '@/services/authService'
+import { getEmailValidationError } from '@/utils/emailValidation'
 
 const email = ref('')
 const emailError = ref('')
@@ -54,19 +55,8 @@ const submitSuccess = ref('')
 const isSubmitting = ref(false)
 
 const validateEmail = () => {
-	emailError.value = ''
-
-	if (!email.value) {
-		emailError.value = '請輸入電子郵件'
-		return false
-	}
-
-	if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.value)) {
-		emailError.value = '電子郵件格式不正確'
-		return false
-	}
-
-	return true
+	emailError.value = getEmailValidationError(email.value)
+	return !emailError.value
 }
 
 const handleSubmit = async () => {

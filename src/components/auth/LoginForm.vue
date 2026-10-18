@@ -58,9 +58,7 @@
 		</div>
 	</div>
 
-	<div v-if="showSuccessOverlay" class="auth-success-overlay" role="status" aria-live="polite">
-		<p class="auth-success-overlay__message">登入成功!</p>
-	</div>
+	<AuthSuccessOverlay v-if="showSuccessOverlay" message="登入成功!" />
 
 </template>
 
@@ -70,6 +68,8 @@ import { authServices } from '@/services/authService'
 import { setAuthenticated } from '@/composables/useAuth'
 import { delay } from '@/utils/delay'
 import { redirectAfterLogin } from '@/router'
+import { getEmailValidationError } from '@/utils/emailValidation'
+import AuthSuccessOverlay from '@/components/auth/AuthSuccessOverlay.vue'
 
 const form = reactive({
 	email: '',
@@ -91,11 +91,8 @@ const validateForm = () => {
 
 	let isValid = true
 
-	if (!form.email) {
-		errors.email = '請輸入電子郵件'
-		isValid = false
-	} else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-		errors.email = '電子郵件格式不正確'
+	errors.email = getEmailValidationError(form.email)
+	if (errors.email) {
 		isValid = false
 	}
 
@@ -202,26 +199,6 @@ const handleSubmit = async () => {
 
 .login-form__separator {
 	color: #6c757d;
-}
-
-.auth-success-overlay {
-	position: fixed;
-	inset: 0;
-	background-color: rgba(0, 0, 0, 0.3);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	z-index: 2000;
-}
-
-.auth-success-overlay__message {
-	margin: 0;
-	padding: 1rem 1.75rem;
-	border-radius: 0.75rem;
-	background-color: rgba(0, 0, 0, 0.3);
-	font-size: 1.5rem;
-	font-weight: 700;
-	color: #fff;
 }
 
 @media (max-width: 576px) {
