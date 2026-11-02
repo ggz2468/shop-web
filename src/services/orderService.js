@@ -1,6 +1,7 @@
 import http from '@/plugins/axios'
 
 export const orderServices = {
+    getOrder: orderId => http.get(`/orders/${orderId}`),
     getOrders: (page = 1, rowCountsPerPage = 10) => http.get('/orders', {
         params: { page, row_counts_per_page: rowCountsPerPage },
     }),

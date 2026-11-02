@@ -38,8 +38,14 @@ npm run dev
 - `/orders` 透過 `GET /api/orders` 顯示會員自己的歷史訂單，每頁 10 筆。
 - 狀態與付款／配送方式中文由 `GET /api/orders/options` 提供；後端須包含 `order_statuses` 與 `payment_statuses` 字典。
 - 支援載入提示、空列表、錯誤重試與分頁；未登入時沿用 API 攔截器導向登入頁。
-- 金額以新台幣呈現，下單時間以台灣時間顯示；目前不提供訂單詳情、取消或付款操作。
+- 金額以新台幣呈現，下單時間以台灣時間顯示。
+- 每筆訂單整張卡片均為詳情連結，滑鼠移入或鍵盤聚焦時變色，按 Enter 可進入詳情。
+- `/orders/:id` 透過 `GET /api/orders/{order}` 顯示訂單狀態、收件／超商資訊、商品快照與保存的金額；稅額為內含稅額，不重複加總。
+- 詳情支援直接開啟、切換訂單、載入提示、404 提示、錯誤重試與返回列表；目前不提供取消或付款操作。
 
 ### 前端共用模組
 - 會員相關表單共用 `src/utils/emailValidation.js` 的 Email 驗證規則與提示，輸入 trim 仍由各表單處理。
 - 登入與註冊共用 `AuthSuccessOverlay` 呈現成功提示；請求、三秒等待與導頁仍由各表單管理。
+- 訂單列表與詳情共用 `src/utils/orderOptions.js` 的顯示字典檢查及標籤查找，保留嚴格型別比對與未知值提示；各頁請求與快取仍獨立管理。
+- 商品規格與歷史訂單詳情共用 `src/utils/productVariant.js` 的 `PRODUCT_SIZE_LABELS` 尺寸表；缺值及未知尺寸的文字依各畫面既有規則呈現。
+- 訂單列表與詳情共用 `src/utils/orderFormatting.js` 的新台幣金額與台灣時間格式。

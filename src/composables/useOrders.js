@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import { orderServices } from '@/services/orderService'
 import { resolveApiErrorMessage } from '@/utils/apiError'
+import { findOptionLabelByValue, hasOrderDisplayOptions } from '@/utils/orderOptions'
 
 export const useOrders = () => {
     const orders = ref([])
@@ -34,8 +35,7 @@ export const useOrders = () => {
                 || !Number.isInteger(result.meta?.current_page) || result.meta.current_page < 1
                 || !Number.isInteger(result.meta?.total) || result.meta.total < 0
                 || result.meta?.per_page !== itemsPerPage
-                || !['order_statuses', 'payment_statuses', 'payment_methods', 'shipping_methods']
-                    .every(key => Array.isArray(dictionaries?.[key]) && dictionaries[key].length > 0)) {
+                || !hasOrderDisplayOptions(dictionaries)) {
                 throw new Error('Invalid order list or options response')
             }
 
@@ -52,8 +52,7 @@ export const useOrders = () => {
     }
 
     const retry = () => loadOrders(requestedPage)
-    const optionLabel = (key, value) => options.value?.[key]
-        ?.find(option => option.value === value)?.label ?? `未知（${value}）`
+    const optionLabel = (key, value) => findOptionLabelByValue(options.value?.[key], value)
 
     return { orders, loading, errorMessage, currentPage, totalItems, itemsPerPage, loadOrders, retry, optionLabel }
 }

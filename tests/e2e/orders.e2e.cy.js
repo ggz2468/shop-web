@@ -98,6 +98,29 @@ describe('會員歷史訂單', () => {
             .find('button').should('not.exist')
     })
 
+    it('整張訂單卡片連至詳情，呈現快照與保存的金額並可返回列表', () => {
+        cy.intercept('GET', '**/api/orders?*', response([order]))
+        cy.intercept('GET', '**/api/orders/1', { data: {
+            ...order, items_subtotal: 1200, shipping_fee: 80, tax_amount: 58,
+            recipient_name: '測試會員', recipient_phone: '0912345678',
+            recipient_zip_code: '100', recipient_address: '測試路 1 號',
+            items: [{
+                product_variant_id: 1, product_name: '歷史商品', product_sku: null,
+                product_color: '黑色', product_size: 3, product_price: 500, quantity: 3, subtotal: 1200,
+            }],
+        } }).as('detail')
+        cy.visit('/orders')
+        cy.get('a.order-summary').should('have.attr', 'href', '/orders/1').click()
+        cy.wait('@detail')
+        cy.location('pathname').should('equal', '/orders/1')
+        cy.contains('歷史商品').should('be.visible')
+        cy.contains('未提供').should('be.visible')
+        cy.contains('內含稅額').should('be.visible')
+        cy.contains('1,280').should('be.visible')
+        cy.contains('a', '返回訂單列表').click()
+        cy.location('pathname').should('equal', '/orders')
+    })
+
     it('空列表顯示繼續選購入口，不顯示分頁', () => {
         cy.intercept('GET', '**/api/orders?*', response([]))
         cy.visit('/orders')
