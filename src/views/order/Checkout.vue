@@ -9,6 +9,7 @@ import { resolveApiErrorMessage } from '@/utils/apiError'
 import { fetchPaymentCheckout } from '@/utils/paymentCheckout'
 import CartItemProduct from '@/components/cart/CartItemProduct.vue'
 import CenteredState from '@/components/layout/CenteredState.vue'
+import PaymentCheckoutForm from '@/components/order/PaymentCheckoutForm.vue'
 
 const { items, totalQuantity, loading, errorMessage, hasItems, loadCart } = useCart()
 const paymentMethod = ref(null)
@@ -16,7 +17,6 @@ const shippingMethod = ref(null)
 const submitting = ref(false)
 const order = ref(null)
 const paymentCheckout = ref(null)
-const paymentFormRef = ref(null)
 // 同一次結帳沿用相同的冪等鍵，避免重試時建立重複訂單
 let idempotencyKey = null
 
@@ -77,8 +77,6 @@ const {
     paymentCheckout,
     errorMessage,
 })
-
-const paymentFormInputs = computed(() => Object.entries(paymentCheckout.value?.request_payload ?? {}))
 
 const createIdempotencyKey = () => {
     if (typeof globalThis.crypto?.randomUUID === 'function') {
@@ -143,10 +141,6 @@ const handleConfirmOrder = async () => {
     } finally {
         submitting.value = false
     }
-}
-
-const submitPaymentForm = () => {
-    paymentFormRef.value?.submit()
 }
 
 onMounted(async () => {
@@ -364,23 +358,11 @@ onMounted(async () => {
                             應付金額：{{ paymentCheckout.currency }} {{ paymentCheckout.amount }}
                         </p>
 
-                        <form
-                            ref="paymentFormRef"
-                            :action="paymentCheckout.checkout_payload.action"
-                            :method="paymentCheckout.checkout_payload.method"
-                        >
-                            <input
-                                v-for="[name, value] in paymentFormInputs"
-                                :key="name"
-                                type="hidden"
-                                :name="name"
-                                :value="value"
-                            >
-                        </form>
-
-                        <button type="button" class="btn btn-success" @click="submitPaymentForm">
-                            確認付款結帳
-                        </button>
+                        <PaymentCheckoutForm :checkout="paymentCheckout">
+                            <button type="submit" class="btn btn-success">
+                                確認付款結帳
+                            </button>
+                        </PaymentCheckoutForm>
                     </template>
                 </div>
             </template>

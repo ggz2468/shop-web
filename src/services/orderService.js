@@ -6,8 +6,9 @@ export const orderServices = {
         params: { page, row_counts_per_page: rowCountsPerPage },
     }),
     getOrderOptions: () => http.get('/orders/options'),
+    createPaymentTransaction: orderId => http.post(`/orders/${orderId}/payment-transactions`),
     createOrder: (data, idempotencyKey) => http.post('/orders', data, {
         headers: { 'Idempotency-Key': idempotencyKey },
     }),
-    getPaymentCheckout: (orderId) => http.get(`/orders/${orderId}/payment-checkout`),
+    getPaymentCheckout: (orderId, config) => http.get(`/orders/${orderId}/payment-checkout`, config),
 }

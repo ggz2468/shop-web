@@ -29,6 +29,7 @@ export const useOrderDetail = () => {
             const dictionaries = optionsResponse.data?.data
             if (!result || String(result.id) !== String(id)
                 || !Array.isArray(result.items)
+                || typeof result.actions?.can_create_payment_transaction !== 'boolean'
                 || !hasOrderDisplayOptions(dictionaries)) {
                 throw new Error('Invalid order detail or options response')
             }

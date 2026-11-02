@@ -21,6 +21,17 @@ const response = (data, total = data.length, page = 1) => ({
     data, meta: { total, per_page: 10, current_page: page },
 })
 
+const detail = {
+    ...order, items_subtotal: 1200, shipping_fee: 80, tax_amount: 58,
+    recipient_name: '測試會員', recipient_phone: '0912345678',
+    recipient_zip_code: '100', recipient_address: '測試路 1 號',
+    actions: { can_create_payment_transaction: true },
+    items: [{
+        product_variant_id: 1, product_name: '歷史商品', product_sku: null,
+        product_color: '黑色', product_size: 3, product_price: 500, quantity: 3, subtotal: 1200,
+    }],
+}
+
 describe('會員歷史訂單', () => {
     beforeEach(() => {
         cy.intercept('GET', '**/api/auth/user', { statusCode: 401 })
@@ -100,15 +111,7 @@ describe('會員歷史訂單', () => {
 
     it('整張訂單卡片連至詳情，呈現快照與保存的金額並可返回列表', () => {
         cy.intercept('GET', '**/api/orders?*', response([order]))
-        cy.intercept('GET', '**/api/orders/1', { data: {
-            ...order, items_subtotal: 1200, shipping_fee: 80, tax_amount: 58,
-            recipient_name: '測試會員', recipient_phone: '0912345678',
-            recipient_zip_code: '100', recipient_address: '測試路 1 號',
-            items: [{
-                product_variant_id: 1, product_name: '歷史商品', product_sku: null,
-                product_color: '黑色', product_size: 3, product_price: 500, quantity: 3, subtotal: 1200,
-            }],
-        } }).as('detail')
+        cy.intercept('GET', '**/api/orders/1', { data: detail }).as('detail')
         cy.visit('/orders')
         cy.get('a.order-summary').should('have.attr', 'href', '/orders/1').click()
         cy.wait('@detail')
@@ -119,6 +122,62 @@ describe('會員歷史訂單', () => {
         cy.contains('1,280').should('be.visible')
         cy.contains('a', '返回訂單列表').click()
         cy.location('pathname').should('equal', '/orders')
+    })
+
+    it('依資格新增一次付款交易，等待資料就緒後產生付款表單', () => {
+        let created = false
+        let creations = 0
+        let checkouts = 0
+        cy.intercept('GET', '**/api/orders/1', request => request.reply({
+            data: { ...detail, actions: { can_create_payment_transaction: !created } },
+        }))
+        cy.intercept('POST', '**/api/orders/1/payment-transactions', request => {
+            creations += 1
+            created = true
+            request.reply({ statusCode: 201, delay: 300, body: { data: { order_id: 1, payment_transaction_id: 10 } } })
+        }).as('create')
+        cy.intercept('GET', '**/api/orders/1/payment-checkout', request => {
+            checkouts += 1
+            request.reply(checkouts === 1 ? { statusCode: 202, body: {} } : {
+                statusCode: 200, body: { data: {
+                    order_id: 1, amount: 1280, currency: 'TWD',
+                    checkout_payload: { action: 'https://payment-stage.ecpay.com.tw/Cashier/AioCheckOut/V5', method: 'POST' },
+                    request_payload: { MerchantTradeNo: 'PAY_TEST' },
+                } },
+            })
+        })
+        cy.visit('/orders/1')
+        cy.contains('button', '新增付款交易').dblclick()
+        cy.wait('@create')
+        cy.contains('button', '前往付款').should('be.visible')
+        cy.get('form').should('have.prop', 'method', 'post')
+        cy.get('input[name="MerchantTradeNo"]').should('have.value', 'PAY_TEST')
+        cy.then(() => expect(creations).to.equal(1))
+    })
+
+    it('已付款且資格為 false 時不提供新增或繼續付款操作', () => {
+        cy.intercept('GET', '**/api/orders/1', {
+            data: { ...detail, payment_status: 3, actions: { can_create_payment_transaction: false } },
+        })
+        cy.visit('/orders/1')
+        cy.contains('此訂單目前無法新增付款交易或前往付款。').should('be.visible')
+        cy.contains('button', '新增付款交易').should('not.exist')
+        cy.contains('button', '取得付款資料／繼續付款').should('not.exist')
+    })
+
+    it('資格過期回傳 409 時顯示衝突並刷新訂單，不再重複新增', () => {
+        let conflicted = false
+        cy.intercept('GET', '**/api/orders/1', request => request.reply({
+            data: { ...detail, payment_status: conflicted ? 3 : 1, actions: { can_create_payment_transaction: !conflicted } },
+        }))
+        cy.intercept('POST', '**/api/orders/1/payment-transactions', request => {
+            conflicted = true
+            request.reply({ statusCode: 409, body: { message: '此訂單目前無法建立付款交易。' } })
+        })
+        cy.visit('/orders/1')
+        cy.contains('button', '新增付款交易').click()
+        cy.get('[role="alert"]').should('contain', '此訂單目前無法建立付款交易。')
+        cy.contains('button', '新增付款交易').should('not.exist')
     })
 
     it('空列表顯示繼續選購入口，不顯示分頁', () => {

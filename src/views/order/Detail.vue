@@ -1,12 +1,28 @@
 <script setup>
-import { watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useOrderDetail } from '@/composables/useOrderDetail'
 import { formatOrderMoney, formatOrderDate } from '@/utils/orderFormatting'
 import { PRODUCT_SIZE_LABELS } from '@/utils/productVariant'
+import { useOrderPayment } from '@/composables/useOrderPayment'
+import PaymentCheckoutForm from '@/components/order/PaymentCheckoutForm.vue'
 
 const route = useRoute()
 const { order, loading, errorMessage, notFound, loadOrder, optionLabel } = useOrderDetail()
+const {
+    busy, creating, loadingCheckout, checkout, canCreate, canContinue,
+    paymentError, paymentMessage, createTransaction, loadCheckout, refreshPaymentState,
+} = useOrderPayment({ order, orderId: computed(() => route.params.id), refreshOrder: loadOrder })
+const submittingPayment = ref(false)
+
+const handlePageShow = (event) => {
+    if (event.persisted) {
+        submittingPayment.value = false
+        refreshPaymentState()
+    }
+}
+onMounted(() => window.addEventListener('pageshow', handlePageShow))
+onUnmounted(() => window.removeEventListener('pageshow', handlePageShow))
 
 watch(() => route.params.id, id => loadOrder(id), { immediate: true })
 </script>
@@ -85,6 +101,38 @@ watch(() => route.params.id, id => loadOrder(id), { immediate: true })
                         <div class="d-flex justify-content-between gap-2"><dt>內含稅額</dt><dd>{{ formatOrderMoney(order.tax_amount) }}</dd></div>
                         <div class="d-flex justify-content-between gap-2 border-top pt-2 fw-bold"><dt>訂單總額</dt><dd>{{ formatOrderMoney(order.total_amount) }}</dd></div>
                     </dl>
+                </section>
+
+                <section class="border rounded p-3 mt-3" aria-labelledby="order-payment-title" :aria-busy="busy">
+                    <h3 id="order-payment-title" class="h5">付款操作</h3>
+                    <p class="text-muted small">可否新增交易由後端判斷；前往金流頁不代表付款完成，返回後請重新確認訂單狀態。</p>
+                    <p v-if="paymentError" class="alert alert-danger" role="alert">{{ paymentError }}</p>
+                    <p v-if="paymentMessage" class="alert alert-info" role="status">{{ paymentMessage }}</p>
+                    <p v-if="loadingCheckout" role="status">付款資料產生中，請稍候...</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <button v-if="canCreate && !checkout" type="button" class="btn btn-primary" :disabled="busy" @click="createTransaction">
+                            新增付款交易
+                        </button>
+                        <button v-else-if="!checkout && canContinue" type="button" class="btn btn-primary" :disabled="busy" @click="loadCheckout">
+                            {{ loadingCheckout ? '取得付款資料中...' : '取得付款資料／繼續付款' }}
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary" :disabled="busy || submittingPayment" @click="refreshPaymentState">
+                            重新整理訂單
+                        </button>
+                    </div>
+                    <p v-if="creating" class="mt-2 mb-0" role="status">付款交易處理中，請勿重複送出...</p>
+                    <p v-else-if="!canCreate && !canContinue && !checkout" class="text-muted mb-0 mt-2">此訂單目前無法新增付款交易或前往付款。</p>
+                    <PaymentCheckoutForm
+                        v-if="checkout"
+                        class="mt-3"
+                        :checkout="checkout"
+                        @submit="submittingPayment = true"
+                    >
+                        <p>應付金額：{{ checkout.currency }} {{ formatOrderMoney(checkout.amount) }}</p>
+                        <button type="submit" class="btn btn-success" :disabled="busy || submittingPayment">
+                            {{ submittingPayment ? '前往金流頁中...' : '前往付款' }}
+                        </button>
+                    </PaymentCheckoutForm>
                 </section>
             </template>
         </div>

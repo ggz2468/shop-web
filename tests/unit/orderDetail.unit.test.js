@@ -12,7 +12,9 @@ const dictionaries = {
     payment_methods: [{ value: 1, label: '信用卡' }],
     shipping_methods: [{ value: 1, label: '宅配' }],
 }
-const detail = id => ({ data: { data: { id, number: `ORD${id}`, items: [] } } })
+const detail = id => ({
+    data: { data: { id, number: `ORD${id}`, items: [], actions: { can_create_payment_transaction: true } } },
+})
 
 describe('會員訂單詳情', () => {
     beforeEach(() => {
@@ -22,7 +24,10 @@ describe('會員訂單詳情', () => {
     })
 
     it('載入指定訂單與後端字典，保留快照而不計算金額', async () => {
-        const snapshot = { id: 1, items: [{ product_price: 300, quantity: 2, subtotal: 550 }], total_amount: 630 }
+        const snapshot = {
+            id: 1, items: [{ product_price: 300, quantity: 2, subtotal: 550 }], total_amount: 630,
+            actions: { can_create_payment_transaction: true },
+        }
         orderServices.getOrder.mockResolvedValue({ data: { data: snapshot } })
         const state = useOrderDetail()
         const pending = state.loadOrder('1')
@@ -75,6 +80,9 @@ describe('會員訂單詳情', () => {
         { data: { data: null } },
         { data: { data: { id: 2, items: [] } } },
         { data: { data: { id: 1 } } },
+        { data: { data: { id: 1, items: [] } } },
+        { data: { data: { id: 1, items: [], actions: { can_create_payment_transaction: 'true' } } } },
+        { data: { data: { id: 1, items: [], actions: { can_create_payment_transaction: null } } } },
     ])('拒絕不完整或錯誤訂單的回應 %#', async (response) => {
         orderServices.getOrder.mockResolvedValue(response)
         const state = useOrderDetail()
